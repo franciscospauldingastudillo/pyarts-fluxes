@@ -4,6 +4,9 @@
 Created on Thu Mar 14 15:21:58 2024
 
 @author: Manfred Brath
+
+Example script to demonstrate the usage of the flux_simulator_module for single atmosphere simulations.
+
 """
 import os
 import numpy as np
@@ -28,8 +31,9 @@ aux_filename='aux_idx9108_lat10.975_lon36.975.xml'
 # atm_filename = "atm_mean.xml"
 # aux_filename = "aux_mean.xml"
 
-# sun position
-sun_pos = [1.495978707e11, 0.0, 36.]
+# =============================================================================
+# Set frequency grids
+# =============================================================================
 
 min_wavelength_sw = 3e-7  # [m]
 max_wavelength_sw = 5e-6  # [m]
@@ -49,7 +53,7 @@ f_grid_lw=convert.kaycm2freq(wvn)
 
 
 # =============================================================================
-# setup atmosphere
+# load data and prepare input
 # =============================================================================
 
 # load atmosphere
@@ -71,6 +75,9 @@ surface_temperature = aux[0]
 # surface reflectivity
 surface_reflectivity_sw = 0.3
 surface_reflectivity_lw = 0.05
+
+# sun position
+sun_pos = [1.495978707e11, 0.0, 36.]
 
 
 # =============================================================================

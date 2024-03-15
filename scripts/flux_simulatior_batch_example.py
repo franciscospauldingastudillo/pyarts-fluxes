@@ -4,6 +4,9 @@
 Created on Thu Mar 14 15:21:58 2024
 
 @author: Manfred Brath
+
+Example script to demonstrate the usage of the flux_simulator_module for batch simulations.
+
 """
 
 import numpy as np
@@ -15,7 +18,7 @@ from pyarts import arts
 #Load test data
 atms=fsm.xml.load('../atmdata/batch_atmospheres/atms_short.xml')
 auxs=fsm.xml.load('../atmdata/batch_atmospheres/auxs_short.xml')    
-# refls=fsm.xml.load('../atmdata/batch_atmospheres/refls_short.xml')
+
 
 
 #set frequency

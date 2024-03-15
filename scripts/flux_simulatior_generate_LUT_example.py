@@ -4,6 +4,9 @@
 Created on Thu Mar 14 15:21:58 2024
 
 @author: Manfred Brath
+
+Example script to demonstrate the usage of the flux_simulator_module for generating lookuptables.
+
 """
 
 import numpy as np
@@ -15,7 +18,7 @@ from pyarts import arts
 
 # %% generate example atmosphere needed for standard LUT
 # This atmosphere is not intended to be fully realistic, but to be simply
-# an example for the calculation of the OLR.
+# an example for the calculation of LUT.
 
 # set pressure grid
 pressure_profile = np.linspace(1000e2, 1e2, 80)
