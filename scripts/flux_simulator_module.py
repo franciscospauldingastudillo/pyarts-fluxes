@@ -776,6 +776,38 @@ class FluxSimulator(FluxSimulationConfig):
         start_index=0,
         end_index=-1,
     ):
+        """
+        This function calculates the fluxes for a batch of atmospheres.
+        The atmospheres are defined by an array of atmospheres.
+
+        Parameters
+        ----------
+        f_grid : 1Darray
+            Frequency grid.
+        atmospheres : ArrayOfGriddedField4
+            Batch of atmospheres.
+        surface_tempratures : 1Darray
+            Surface temperatures.
+        surface_altitudes : 1Darray
+            Surface altitudes.
+        surface_reflectivities : 1Darray
+            Surface reflectivities with each row either one element list of a list with the length of f_grid.
+        geographical_positions : 2Darray
+            Geographical positions with each row containing lat and lon.
+        sun_positions : 2Darray
+            Sun positions with each row conating distance sun earth, zenith latitude and zenith longitude.
+        start_index : int, default is 0
+            Start index of batch calculation.
+        end_index : int, default is -1
+            End index of batch calculation.
+
+        Returns
+        -------
+        results : dict
+            Dictionary containing the results.
+        """
+        
+        
         
 
         # define environment
