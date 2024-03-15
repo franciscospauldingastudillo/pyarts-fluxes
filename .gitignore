@@ -1,0 +1,17 @@
+
+*.dat
+*.txt
+*-workspace
+/old/*
+/.vscode/*
+/.idea/*
+*/__pycache__/*
+/.eggs/*
+.DS*
+*-checkpoint.py
+*.err
+*.out
+/arts-catalogs/*
+/auxdata/*
+/scattering_data/*xml*
+
