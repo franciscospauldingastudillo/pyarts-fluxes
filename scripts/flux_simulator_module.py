@@ -40,11 +40,18 @@ class FluxSimulationConfig:
             "O2-*-1e12-1e99,O2-CIAfunCKDMT100",
             "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
             "CO2, CO2-CKDMT252",
+            "CH4",
             "O3",
             "O3-XFIT",
         ]
 
-
+        # set some default values for some well mixed species
+        self.well_mixed_species_defaults={}
+        self.well_mixed_species_defaults['CO2'] = 415e-6 
+        self.well_mixed_species_defaults['CH4'] = 1.8e-6 
+        self.well_mixed_species_defaults['O2'] = 0.21 
+        self.well_mixed_species_defaults['O2'] = 0.78 
+        
 
         # set default paths
         self.catalog_version="2.6.0"
@@ -278,6 +285,36 @@ class FluxSimulator(FluxSimulationConfig):
         """
                 
         return self.ws.abs_species
+    
+    def check_species(self):
+
+        atm_grids=self.ws.atm_fields_compact.value.grids[0]        
+
+        # Get species of atm-field
+        atm_species = [str(tag).split('-')[1]
+                       for tag in atm_grids if "abs_species" in str(tag)]
+
+        # Get species from defined abs_species
+        abs_species = self.get_species().value
+        abs_species = [str(tag).split('-')[0] for tag in abs_species]
+
+        for abs_species_i in abs_species:
+
+            if abs_species_i not in atm_species:
+
+                # check for default
+                if abs_species_i in self.well_mixed_species_defaults.keys():
+
+                    self.ws.atm_fields_compactAddConstant(
+                        self.ws.atm_fields_compact, f'abs_species-{abs_species_i}', 
+                        self.well_mixed_species_defaults[abs_species_i])
+                    
+                    print(f'{abs_species_i} data not included in atmosphere data\n'\
+                          f'I will use default value {self.well_mixed_species_defaults[abs_species_i]}')
+                    
+                    
+                else:
+                    raise ValueError(f'{abs_species_i} data not included in atmosphere data\n')    
         
 
     def define_particulate_scatterer(
@@ -606,7 +643,8 @@ class FluxSimulator(FluxSimulationConfig):
             self.ws.sunsOff()
 
         # prepare atmosphere
-        self.ws.atm_fields_compact = atm
+        self.ws.atm_fields_compact = atm        
+        self.check_species()        
         self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
 
         # set absorption

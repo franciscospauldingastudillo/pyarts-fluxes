@@ -49,6 +49,14 @@ FluxSimulator_batch = fsm.FluxSimulator("BATCH_Test")
 FluxSimulator_batch.ws.f_grid=f_grid_sw   
 FluxSimulator_batch.emission = 0
 FluxSimulator_batch.gas_scattering = True
+FluxSimulator_batch.set_species([
+    "H2O, H2O-SelfContCKDMT350, H2O-ForeignContCKDMT350",
+    "O2-*-1e12-1e99,O2-CIAfunCKDMT100",
+    "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
+    "CO2, CO2-CKDMT252",
+    "O3",
+    "O3-XFIT",
+])
 
 FluxSimulator_batch.define_particulate_scatterer(
     "LWC",

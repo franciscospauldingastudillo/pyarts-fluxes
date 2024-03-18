@@ -22,6 +22,7 @@ from pyarts.arts import convert
 # =============================================================================
 
 
+
 setup_name = "single_atmosphere"
 data_path = f"../atmdata/{setup_name}/"
 atm_filename='atm_idx9108_lat10.975_lon36.975.xml'
@@ -88,40 +89,38 @@ LW_flux_simulator = fsm.FluxSimulator(setup_name + "_LW")
 LW_flux_simulator.ws.f_grid=f_grid_lw  
 
 
-
-
-#comment this block if you want clearsky only==================================
-LW_flux_simulator.define_particulate_scatterer(
-    "LWC",
-    "pnd_agenda_CGLWC",
-    "MieSpheres_H2O_liquid",
-    ["mass_density"]
-)
-LW_flux_simulator.define_particulate_scatterer(
-    "RWC",
-    "pnd_agenda_CGRWC",
-    "MieSpheres_H2O_liquid",
-    ["mass_density"]
-)
-LW_flux_simulator.define_particulate_scatterer(
-    "IWC",
-    "pnd_agenda_CGIWC",
-    "HexagonalColumn-ModeratelyRough.modified",
-    ["mass_density"]
-)
-LW_flux_simulator.define_particulate_scatterer(
-    "SWC",
-    "pnd_agenda_CGSWC_tropic",
-    "10-PlateAggregate-ModeratelyRough.modified",
-    ["mass_density"]
-)
-LW_flux_simulator.define_particulate_scatterer(
-    "GWC",
-    "pnd_agenda_CGGWC",
-    "Droxtal-SeverelyRough.modified",
-    ["mass_density"]
-)
-#==============================================================================
+# #comment this block if you want clearsky only==================================
+# LW_flux_simulator.define_particulate_scatterer(
+#     "LWC",
+#     "pnd_agenda_CGLWC",
+#     "MieSpheres_H2O_liquid",
+#     ["mass_density"]
+# )
+# LW_flux_simulator.define_particulate_scatterer(
+#     "RWC",
+#     "pnd_agenda_CGRWC",
+#     "MieSpheres_H2O_liquid",
+#     ["mass_density"]
+# )
+# LW_flux_simulator.define_particulate_scatterer(
+#     "IWC",
+#     "pnd_agenda_CGIWC",
+#     "HexagonalColumn-ModeratelyRough.modified",
+#     ["mass_density"]
+# )
+# LW_flux_simulator.define_particulate_scatterer(
+#     "SWC",
+#     "pnd_agenda_CGSWC_tropic",
+#     "10-PlateAggregate-ModeratelyRough.modified",
+#     ["mass_density"]
+# )
+# LW_flux_simulator.define_particulate_scatterer(
+#     "GWC",
+#     "pnd_agenda_CGGWC",
+#     "Droxtal-SeverelyRough.modified",
+#     ["mass_density"]
+# )
+# #==============================================================================
 
 results_lw = LW_flux_simulator.flux_simulator_single_profile(   
     atm,
@@ -143,38 +142,38 @@ SW_flux_simulator.emission = 0
 SW_flux_simulator.gas_scattering = True
 
 
-#comment this block if you want clearsky only==================================
-SW_flux_simulator.define_particulate_scatterer(
-    "LWC",
-    "pnd_agenda_CGLWC",
-    "MieSpheres_H2O_liquid",
-    ["mass_density"]
-)
-SW_flux_simulator.define_particulate_scatterer(
-    "RWC",
-    "pnd_agenda_CGRWC",
-    "MieSpheres_H2O_liquid",
-    ["mass_density"]
-)
-SW_flux_simulator.define_particulate_scatterer(
-    "IWC",
-    "pnd_agenda_CGIWC",
-    "HexagonalColumn-ModeratelyRough.modified",
-    ["mass_density"]
-)
-SW_flux_simulator.define_particulate_scatterer(
-    "SWC",
-    "pnd_agenda_CGSWC_tropic",
-    "10-PlateAggregate-ModeratelyRough.modified",
-    ["mass_density"]
-)
-SW_flux_simulator.define_particulate_scatterer(
-    "GWC",
-    "pnd_agenda_CGGWC",
-    "Droxtal-SeverelyRough.modified",
-    ["mass_density"]
-)
-#==============================================================================
+# #comment this block if you want clearsky only==================================
+# SW_flux_simulator.define_particulate_scatterer(
+#     "LWC",
+#     "pnd_agenda_CGLWC",
+#     "MieSpheres_H2O_liquid",
+#     ["mass_density"]
+# )
+# SW_flux_simulator.define_particulate_scatterer(
+#     "RWC",
+#     "pnd_agenda_CGRWC",
+#     "MieSpheres_H2O_liquid",
+#     ["mass_density"]
+# )
+# SW_flux_simulator.define_particulate_scatterer(
+#     "IWC",
+#     "pnd_agenda_CGIWC",
+#     "HexagonalColumn-ModeratelyRough.modified",
+#     ["mass_density"]
+# )
+# SW_flux_simulator.define_particulate_scatterer(
+#     "SWC",
+#     "pnd_agenda_CGSWC_tropic",
+#     "10-PlateAggregate-ModeratelyRough.modified",
+#     ["mass_density"]
+# )
+# SW_flux_simulator.define_particulate_scatterer(
+#     "GWC",
+#     "pnd_agenda_CGGWC",
+#     "Droxtal-SeverelyRough.modified",
+#     ["mass_density"]
+# )
+# #==============================================================================
 
 
 results_sw = SW_flux_simulator.flux_simulator_single_profile(    
