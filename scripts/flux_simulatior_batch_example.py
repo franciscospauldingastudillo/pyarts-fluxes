@@ -83,4 +83,4 @@ FluxSimulator_batch.define_particulate_scatterer(
 
 
 results = FluxSimulator_batch.flux_simulator_batch(
-    f_grid_sw, atms, surface_tempratures, surface_altitudes, refls, geographical_positions, sun_positions,end_index=5)
+    atms, surface_tempratures, surface_altitudes, refls, geographical_positions, sun_positions,end_index=5)

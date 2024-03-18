@@ -547,8 +547,7 @@ class FluxSimulator(FluxSimulationConfig):
     
 
     def flux_simulator_single_profile(
-        self,
-        f_grid,        
+        self,        
         atm,
         T_surface,
         z_surface,
@@ -586,9 +585,6 @@ class FluxSimulator(FluxSimulationConfig):
 
         # define environment
         # =============================================================================
-
-        # Frequency grid
-        self.ws.f_grid = f_grid
 
         if len(sun_pos) > 0:
             # set sun source
@@ -765,8 +761,7 @@ class FluxSimulator(FluxSimulationConfig):
         return results
     
     def flux_simulator_batch(
-        self,
-        f_grid,        
+        self,    
         atmospheres,
         surface_tempratures,
         surface_altitudes,
@@ -813,8 +808,6 @@ class FluxSimulator(FluxSimulationConfig):
         # define environment
         # =============================================================================
 
-        # Frequency grid
-        self.ws.f_grid = f_grid
         
         if len(self.sunspectrumpath) == 0:
             raise ValueError('sunspectrumpath not set!')

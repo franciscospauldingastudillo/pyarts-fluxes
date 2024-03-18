@@ -86,8 +86,7 @@ sun_pos = [1.495978707e11, 0.0, 36.]
 
 LW_flux_simulator = fsm.FluxSimulator(setup_name + "_LW")
 LW_flux_simulator.ws.f_grid=f_grid_lw  
-LW_flux_simulator.emission = 1
-LW_flux_simulator.gas_scattering = False
+
 
 
 
@@ -124,8 +123,7 @@ LW_flux_simulator.define_particulate_scatterer(
 )
 #==============================================================================
 
-results_lw = LW_flux_simulator.flux_simulator_single_profile(        
-    f_grid_sw,       
+results_lw = LW_flux_simulator.flux_simulator_single_profile(   
     atm,
     surface_temperature,
     surface_altitude,
@@ -179,8 +177,7 @@ SW_flux_simulator.define_particulate_scatterer(
 #==============================================================================
 
 
-results_sw = SW_flux_simulator.flux_simulator_single_profile(        
-    f_grid_sw,       
+results_sw = SW_flux_simulator.flux_simulator_single_profile(    
     atm,
     surface_temperature,
     surface_altitude,
