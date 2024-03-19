@@ -16,7 +16,8 @@ FluxSimulator requires the following Python packages:
 To install FluxSimulator, clone the repository and run the setup script:
 
 ```bash
-python -m pip install FluxSimulator
+cd FluxSimulator
+python -m pip install .
 ```
 
 ## Usage
