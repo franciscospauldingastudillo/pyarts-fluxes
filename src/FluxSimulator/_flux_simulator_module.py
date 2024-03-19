@@ -53,19 +53,29 @@ class FluxSimulationConfig:
         ]
 
         # set some default values for some well mixed species
-        self.well_mixed_species_defaults={}
-        self.well_mixed_species_defaults['CO2'] = 415e-6 
-        self.well_mixed_species_defaults['CH4'] = 1.8e-6 
-        self.well_mixed_species_defaults['O2'] = 0.21 
-        self.well_mixed_species_defaults['O2'] = 0.78 
-        
+        self.well_mixed_species_defaults = {}
+        self.well_mixed_species_defaults["CO2"] = 415e-6
+        self.well_mixed_species_defaults["CH4"] = 1.8e-6
+        self.well_mixed_species_defaults["O2"] = 0.21
+        self.well_mixed_species_defaults["O2"] = 0.78
 
         # set default paths
-        self.catalog_version="2.6.0"
-        self.basename_catalog = os.path.join(os.path.dirname(__file__),'..','..','arts-catalogs')
-        self.basename_scatterer = os.path.join(os.path.dirname(__file__),'..','..','scattering_data')
-        self.sunspectrumpath = (
-            os.path.join(self.basename_catalog,os.path.join(f'arts-xml-data-{self.catalog_version}','star','Sun','solar_spectrum_May_2004.xml')))
+        self.catalog_version = "2.6.0"
+        self.basename_catalog = os.path.join(
+            os.path.dirname(__file__), "..", "..", "arts-catalogs"
+        )
+        self.basename_scatterer = os.path.join(
+            os.path.dirname(__file__), "..", "..", "scattering_data"
+        )
+        self.sunspectrumpath = os.path.join(
+            self.basename_catalog,
+            os.path.join(
+                f"arts-xml-data-{self.catalog_version}",
+                "star",
+                "Sun",
+                "solar_spectrum_May_2004.xml",
+            ),
+        )
 
         # set default parameters
         self.Cp = 1.0057e03  # specific heat capacity of dry air [Jkg^{-1}K^{-1}] taken from AMS glossary
@@ -80,11 +90,12 @@ class FluxSimulationConfig:
         self.gas_scattering = False
 
         # set default LUT path
-        self.lut_path = os.path.join(os.getcwd(),'cache',setup_name)
+        self.lut_path = os.path.join(os.getcwd(), "cache", setup_name)
         self.lutname_fullpath = os.path.join(self.lut_path, "LUT.xml")
-        
-        cat.download.retrieve(self.basename_catalog, version=self.catalog_version, verbose=True)
-        
+
+        cat.download.retrieve(
+            self.basename_catalog, version=self.catalog_version, verbose=True
+        )
 
     def generateLutDirectory(self, alt_path=None):
         """
@@ -103,15 +114,20 @@ class FluxSimulationConfig:
             self.lut_path = alt_path
             self.lutname_fullpath = os.path.join(self.lut_path, "LUT.xml")
         os.makedirs(self.lut_path, exist_ok=True)
-        
-    def set_paths(self, basename_catalog=None, basename_scatterer=None,
-                  sunspectrumfile=None, lut_path=None ):
+
+    def set_paths(
+        self,
+        basename_catalog=None,
+        basename_scatterer=None,
+        sunspectrumfile=None,
+        lut_path=None,
+    ):
         """
         This function sets some paths. If a path is not given, the default path is used.
-        
+
         Parameters
         ----------
-  
+
         basename_scatterer : str, optional
             Path to the scatterer. The default is None.
         sunspectrumfile : str, optional
@@ -122,19 +138,17 @@ class FluxSimulationConfig:
         Returns
         -------
         None.
-        
+
         """
-            
+
         if basename_scatterer is not None:
-            self.basename_scatterer=basename_scatterer
+            self.basename_scatterer = basename_scatterer
 
         if sunspectrumfile is not None:
-            self.sunspectrumpath=sunspectrumfile
+            self.sunspectrumpath = sunspectrumfile
 
         if lut_path is not None:
-            self.generateLutDirectory(lut_path)            
-        
-
+            self.generateLutDirectory(lut_path)
 
     def get_paths(self):
         """
@@ -164,7 +178,7 @@ class FluxSimulationConfig:
         None.
         """
 
-        print("basename_catalog: ", self.basename_catalog)        
+        print("basename_catalog: ", self.basename_catalog)
         print("basename_scatterer: ", self.basename_scatterer)
         print("sunspectrumpath: ", self.sunspectrumpath)
         print("lut_path: ", self.lut_path)
@@ -192,9 +206,7 @@ class FluxSimulationConfig:
 
 class FluxSimulator(FluxSimulationConfig):
 
-    def __init__(
-        self, setup_name
-    ):
+    def __init__(self, setup_name):
         """
         This class defines the ARTS setup.
 
@@ -206,15 +218,15 @@ class FluxSimulator(FluxSimulationConfig):
         -------
         None.
         """
-        
-        super().__init__(setup_name) 
+
+        super().__init__(setup_name)
 
         # start ARTS workspace
         self.ws = Workspace()
         self.ws.verbositySetScreen(level=2)
         self.ws.verbositySetAgenda(level=0)
-        
-        #Set stoke dimension
+
+        # Set stoke dimension
         self.ws.IndexSet(self.ws.stokes_dim, 1)
 
         # Create my defined agendas in ws
@@ -260,11 +272,9 @@ class FluxSimulator(FluxSimulationConfig):
         self.ws.jacobianOff()
 
         # set absorption species
-        self.ws.abs_speciesSet(
-            species=self.species
-        )
-        
-    def set_species(self,species):
+        self.ws.abs_speciesSet(species=self.species)
+
+    def set_species(self, species):
         """
         This function sets the gas absorption species.
 
@@ -277,10 +287,10 @@ class FluxSimulator(FluxSimulationConfig):
         -------
         None.
         """
-        
-        self.species=species
-        self.ws.abs_species=self.species
-        
+
+        self.species = species
+        self.ws.abs_species = self.species
+
     def get_species(self):
         """
         This function returns the gas absorption species.
@@ -290,30 +300,31 @@ class FluxSimulator(FluxSimulationConfig):
         list
             List of species.
         """
-                
+
         return self.ws.abs_species
-    
+
     def check_species(self):
-        '''
+        """
         This function checks if all species are included in the atm_fields_compact.
         If not, the species are added with the default values from well_mixed_species_defaults.
-        A ValueError is raised if a species is not included in the atm_fields_compact and 
+        A ValueError is raised if a species is not included in the atm_fields_compact and
         not in well_mixed_species_defaults.
-        
+
         Returns
         -------
         None.
-        '''
+        """
 
-        atm_grids=self.ws.atm_fields_compact.value.grids[0]        
+        atm_grids = self.ws.atm_fields_compact.value.grids[0]
 
         # Get species of atm-field
-        atm_species = [str(tag).split('-')[1]
-                       for tag in atm_grids if "abs_species" in str(tag)]
+        atm_species = [
+            str(tag).split("-")[1] for tag in atm_grids if "abs_species" in str(tag)
+        ]
 
         # Get species from defined abs_species
         abs_species = self.get_species().value
-        abs_species = [str(tag).split('-')[0] for tag in abs_species]
+        abs_species = [str(tag).split("-")[0] for tag in abs_species]
 
         for abs_species_i in abs_species:
 
@@ -323,16 +334,20 @@ class FluxSimulator(FluxSimulationConfig):
                 if abs_species_i in self.well_mixed_species_defaults.keys():
 
                     self.ws.atm_fields_compactAddConstant(
-                        self.ws.atm_fields_compact, f'abs_species-{abs_species_i}', 
-                        self.well_mixed_species_defaults[abs_species_i])
-                    
-                    print(f'{abs_species_i} data not included in atmosphere data\n'\
-                          f'I will use default value {self.well_mixed_species_defaults[abs_species_i]}')
-                    
-                    
+                        self.ws.atm_fields_compact,
+                        f"abs_species-{abs_species_i}",
+                        self.well_mixed_species_defaults[abs_species_i],
+                    )
+
+                    print(
+                        f"{abs_species_i} data not included in atmosphere data\n"
+                        f"I will use default value {self.well_mixed_species_defaults[abs_species_i]}"
+                    )
+
                 else:
-                    raise ValueError(f'{abs_species_i} data not included in atmosphere data\n')    
-        
+                    raise ValueError(
+                        f"{abs_species_i} data not included in atmosphere data\n"
+                    )
 
     def define_particulate_scatterer(
         self,
@@ -363,10 +378,10 @@ class FluxSimulator(FluxSimulationConfig):
         None.
 
         """
-        
+
         if scattering_data_folder is None:
-            scattering_data_folder=self.basename_scatterer
-        
+            scattering_data_folder = self.basename_scatterer
+
         self.ws.StringCreate("species_id_string")
         self.ws.StringSet(self.ws.species_id_string, hydrometeor_type)
         self.ws.ArrayOfStringSet(
@@ -385,16 +400,15 @@ class FluxSimulator(FluxSimulationConfig):
         self.ws.ReadXML(self.ws.scat_meta_temp, smd_name)
         self.ws.Append(self.ws.scat_data_raw, self.ws.scat_data_temp)
         self.ws.Append(self.ws.scat_meta, self.ws.scat_meta_temp)
-        
-        self.allsky=True
 
+        self.allsky = True
 
     def readLUT(self, F_grid_from_LUT=False, fmin=0, fmax=np.inf):
         """
         Reads the Look-Up Table (LUT).
 
         Parameters:
-            F_grid_from_LUT (bool, optional): Flag indicating whether to use the f_grid from the LUT. 
+            F_grid_from_LUT (bool, optional): Flag indicating whether to use the f_grid from the LUT.
                                               Defaults to False.
             fmin (float, optional): Minimum frequency value to read. Defaults to 0.
             fmax (float, optional): Maximum frequency value to read. Defaults to np.inf.
@@ -407,7 +421,7 @@ class FluxSimulator(FluxSimulationConfig):
         self.ws.ReadXML(self.ws.abs_lookup, self.lutname_fullpath)
 
         if F_grid_from_LUT == True:
-            print('Using f_grid from LUT')
+            print("Using f_grid from LUT")
             f_grid = np.array(self.ws.abs_lookup.value.f_grid.value)
 
             f_grid = f_grid[fmin < f_grid]
@@ -420,10 +434,18 @@ class FluxSimulator(FluxSimulationConfig):
         self.ws.abs_lookupAdapt()
         self.ws.lbl_checked = 1
 
-
-    def get_lookuptableWide(self,t_min=150., t_max=350., p_step=0.5,
-                    lines_speedup_option="None", F_grid_from_LUT=False,
-                    cutoff=True, fmin=0, fmax=np.inf, recalc=False):
+    def get_lookuptableWide(
+        self,
+        t_min=150.0,
+        t_max=350.0,
+        p_step=0.5,
+        lines_speedup_option="None",
+        F_grid_from_LUT=False,
+        cutoff=True,
+        fmin=0,
+        fmax=np.inf,
+        recalc=False,
+    ):
         """
         This function calculates the LUT using the wide setup.
 
@@ -453,55 +475,67 @@ class FluxSimulator(FluxSimulationConfig):
         None.
 
         """
-    
+
         # use saved LUT. recalc only when necessary
-        if recalc==False:
+        if recalc == False:
             try:
                 self.readLUT(F_grid_from_LUT=F_grid_from_LUT, fmin=fmin, fmax=fmax)
-                print('...using stored LUT\n')
+                print("...using stored LUT\n")
 
             # recalc LUT
             except RuntimeError:
-                recalc=True
+                recalc = True
 
-        if recalc==True:
-            print('LUT not found or does not fit.\n So, recalc...\n')
-            
-            #generate LUT path
+        if recalc == True:
+            print("LUT not found or does not fit.\n So, recalc...\n")
+
+            # generate LUT path
             self.generateLutDirectory()
 
             # read spectroscopic data
-            print('...reading data\n')
+            print("...reading data\n")
             self.ws.ReadXsecData(basename="xsec/")
             self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(basename="lines/")
 
-            if cutoff==True:
+            if cutoff == True:
                 self.ws.abs_lines_per_speciesCutoff(option="ByLine", value=750e9)
 
             # setup LUT
-            print('...setting up lut\n')
+            print("...setting up lut\n")
             self.ws.abs_lookupSetupWide(t_min=t_min, t_max=t_max, p_step=p_step)
 
             # Setup propagation matrix agenda (absorption)
-            self.ws.propmat_clearsky_agendaAuto(lines_speedup_option=lines_speedup_option)
+            self.ws.propmat_clearsky_agendaAuto(
+                lines_speedup_option=lines_speedup_option
+            )
 
-            if cutoff==True:
+            if cutoff == True:
                 self.ws.lbl_checked = 1
             else:
                 self.ws.lbl_checkedCalc()
 
             # calculate LUT
-            print('...calculating lut\n')
+            print("...calculating lut\n")
             self.ws.abs_lookupCalc()
 
             # save Lut
-            self.ws.WriteXML('binary', self.ws.abs_lookup, self.lutname_fullpath)
-            
-            print('LUT calculation finished!')
+            self.ws.WriteXML("binary", self.ws.abs_lookup, self.lutname_fullpath)
 
-    def get_lookuptable(self, pressure_profile, temperature_profile, vmr_profiles, p_step=0.05,
-                    lines_speedup_option="None", F_grid_from_LUT=False,
-                    cutoff=True, fmin=0, fmax=np.inf, recalc=False):
+            print("LUT calculation finished!")
+
+    def get_lookuptable(
+        self,
+        pressure_profile,
+        temperature_profile,
+        vmr_profiles,
+        p_step=0.05,
+        lines_speedup_option="None",
+        F_grid_from_LUT=False,
+        cutoff=True,
+        fmin=0,
+        fmax=np.inf,
+        recalc=False,
+    ):
         """
         This function calculates the LUT using the wide setup.
         It is important that the size of the first dimension of
@@ -537,84 +571,90 @@ class FluxSimulator(FluxSimulationConfig):
         None.
 
         """
-    
+
         # use saved LUT. recalc only when necessary
-        if recalc==False:
+        if recalc == False:
             try:
                 self.readLUT(F_grid_from_LUT=F_grid_from_LUT, fmin=fmin, fmax=fmax)
-                print('...using stored LUT\n')
+                print("...using stored LUT\n")
 
             # recalc LUT
             except RuntimeError:
-                recalc=True
+                recalc = True
 
-        if recalc==True:
-            print('LUT not found or does not fit.\n So, recalc...\n')
-            
-            #check if vmr has the right amout of species
-            if np.size(vmr_profiles,1)!=np.size(pressure_profile):  
-                raise ValueError('The amount of pressure levels in the vmr_profiles does not match the amount of the pressure levels in the pressure_profile!')
-            
-            if np.size(vmr_profiles,1)!=np.size(temperature_profile):
-                raise ValueError('The amount of temperature levels in the vmr_profiles does not match the amount of the temperature levels in the temperature_profile!')
+        if recalc == True:
+            print("LUT not found or does not fit.\n So, recalc...\n")
 
+            # check if vmr has the right amout of species
+            if np.size(vmr_profiles, 1) != np.size(pressure_profile):
+                raise ValueError(
+                    "The amount of pressure levels in the vmr_profiles does not match the amount of the pressure levels in the pressure_profile!"
+                )
 
-            #put quantities into ARTS
-            self.ws.p_grid=pressure_profile
-            self.ws.t_field=np.reshape(temperature_profile,(len(pressure_profile),1,1))
-            self.ws.vmr_field=np.reshape(vmr_profiles,(len(self.species),len(pressure_profile),1,1))
+            if np.size(vmr_profiles, 1) != np.size(temperature_profile):
+                raise ValueError(
+                    "The amount of temperature levels in the vmr_profiles does not match the amount of the temperature levels in the temperature_profile!"
+                )
 
+            # put quantities into ARTS
+            self.ws.p_grid = pressure_profile
+            self.ws.t_field = np.reshape(
+                temperature_profile, (len(pressure_profile), 1, 1)
+            )
+            self.ws.vmr_field = np.reshape(
+                vmr_profiles, (len(self.species), len(pressure_profile), 1, 1)
+            )
 
-            #generate LUT path
+            # generate LUT path
             self.generateLutDirectory()
 
             # read spectroscopic data
-            print('...reading data\n')
+            print("...reading data\n")
             self.ws.ReadXsecData(basename="xsec/")
             self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(basename="lines/")
 
-            if cutoff==True:
+            if cutoff == True:
                 self.ws.abs_lines_per_speciesCutoff(option="ByLine", value=750e9)
 
             # setup LUT
-            print('...setting up lut\n')
-            self.ws.atmfields_checked=1
+            print("...setting up lut\n")
+            self.ws.atmfields_checked = 1
             self.ws.abs_lookupSetup(p_step=p_step)
 
             # Setup propagation matrix agenda (absorption)
-            self.ws.propmat_clearsky_agendaAuto(lines_speedup_option=lines_speedup_option)
+            self.ws.propmat_clearsky_agendaAuto(
+                lines_speedup_option=lines_speedup_option
+            )
 
-            if cutoff==True:
+            if cutoff == True:
                 self.ws.lbl_checked = 1
             else:
-                self.ws.lbl_checkedCalc()                
+                self.ws.lbl_checkedCalc()
 
             # calculate LUT
-            print('...calculating lut\n')
+            print("...calculating lut\n")
             self.ws.abs_lookupCalc()
 
             # save Lut
-            self.ws.WriteXML('binary', self.ws.abs_lookup, self.lutname_fullpath)
-            
-            print('LUT calculation finished!')        
+            self.ws.WriteXML("binary", self.ws.abs_lookup, self.lutname_fullpath)
 
-    
+            print("LUT calculation finished!")
 
     def flux_simulator_single_profile(
-        self,        
+        self,
         atm,
         T_surface,
         z_surface,
         surface_reflectivity,
         geographical_position=np.array([]),
-        sun_pos=np.array([])
+        sun_pos=np.array([]),
     ):
         """
         This function calculates the fluxes and heating rates for a single atmosphere.
         The atmosphere is defined by the ARTS GriddedField4 atm.
 
         Parameters
-        ----------        
+        ----------
         f_grid : 1Darray
             Frequency grid.
         atm : GriddedField4
@@ -634,8 +674,8 @@ class FluxSimulator(FluxSimulationConfig):
         -------
         results : dict
             Dictionary containing the results.
-            results["flux_clearsky_up"] : 1Darray 
-                Clearsky flux up.                
+            results["flux_clearsky_up"] : 1Darray
+                Clearsky flux up.
             results["flux_clearsky_down"] : 1Darray
                 Clearsky flux down.
             results["spectral_flux_clearsky_up"] : 2Darray
@@ -648,10 +688,10 @@ class FluxSimulator(FluxSimulationConfig):
                 Pressure.
             results["altitude"] : 1Darray
                 Altitude.
-            results["f_grid"] : 1Darray  
+            results["f_grid"] : 1Darray
                 Frequency grid.
             results["flux_allsky_up"] : 1Darray, optional
-                Allsky flux up.                
+                Allsky flux up.
             results["flux_allsky_down"] : 1Darray, optional
                 Allsky flux down.
             results["spectral_flux_allsky_up"] : 2Darray, optional
@@ -687,8 +727,8 @@ class FluxSimulator(FluxSimulationConfig):
             self.ws.sunsOff()
 
         # prepare atmosphere
-        self.ws.atm_fields_compact = atm        
-        self.check_species()        
+        self.ws.atm_fields_compact = atm
+        self.check_species()
         self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
 
         # set absorption
@@ -737,15 +777,18 @@ class FluxSimulator(FluxSimulationConfig):
             self.ws.pnd_fieldCalcFromParticleBulkProps()
             self.ws.scat_data_checkedCalc()
         else:
-            
-            if len(self.ws.scat_species.value)>0:
-                print(('You have define scattering species for a clearsky simulation.\n')
-                               +('Since they are not used we have to erase the scattering species!\n'))
-                self.ws.scat_species=[]   
+
+            if len(self.ws.scat_species.value) > 0:
+                print(
+                    ("You have define scattering species for a clearsky simulation.\n")
+                    + (
+                        "Since they are not used we have to erase the scattering species!\n"
+                    )
+                )
+                self.ws.scat_species = []
             self.ws.scat_data_checked = 1
             self.ws.Touch(self.ws.scat_data)
             self.ws.pnd_fieldZero()
-            
 
         self.ws.atmfields_checkedCalc()
         self.ws.atmgeom_checkedCalc()
@@ -823,16 +866,16 @@ class FluxSimulator(FluxSimulationConfig):
         # ====================================================================================
 
         results = {}
-        
+
         results["flux_clearsky_up"] = flux_cs[:, 1]
-        results["flux_clearsky_down"] = flux_cs[:, 0]        
+        results["flux_clearsky_down"] = flux_cs[:, 0]
         results["spectral_flux_clearsky_up"] = spec_flux_cs[:, :, 1]
-        results["spectral_flux_clearsky_down"] = spec_flux_cs[:, :, 0]        
+        results["spectral_flux_clearsky_down"] = spec_flux_cs[:, :, 0]
         results["heating_rate_clearsky"] = heating_rate_cs
         results["pressure"] = self.ws.p_grid.value[:]
         results["altitude"] = self.ws.z_field.value[:, 0, 0]
         results["f_grid"] = self.ws.f_grid.value[:]
-        
+
         if self.allsky:
             results["flux_allsky_up"] = flux[:, 1]
             results["flux_allsky_down"] = flux[:, 0]
@@ -841,9 +884,9 @@ class FluxSimulator(FluxSimulationConfig):
             results["heating_rate_allsky"] = heating_rate
 
         return results
-    
+
     def flux_simulator_batch(
-        self,    
+        self,
         atmospheres,
         surface_tempratures,
         surface_altitudes,
@@ -883,7 +926,7 @@ class FluxSimulator(FluxSimulationConfig):
         results : dict
             Dictionary containing the results.
             results["array_of_irradiance_field_clearsky"] : 3Darray
-                Clearsky irradiance field.  
+                Clearsky irradiance field.
             results["array_of_pressure"] : 2Darray
                 Pressure.
             results["array_of_altitude"] : 2Darray
@@ -899,52 +942,52 @@ class FluxSimulator(FluxSimulationConfig):
 
 
         """
-        
-        
-        
 
         # define environment
         # =============================================================================
 
-        
         if len(self.sunspectrumpath) == 0:
-            raise ValueError('sunspectrumpath not set!')
+            raise ValueError("sunspectrumpath not set!")
         else:
-            self.ws.GriddedField2Create('sunspectrum')
+            self.ws.GriddedField2Create("sunspectrum")
             self.ws.sunspectrum = xml.load(self.sunspectrumpath)
 
         # prepare atmosphere
         self.ws.batch_atm_fields_compact = atmospheres
-        
+
         # list of surface altitudes
-        self.ws.ArrayOfMatrixCreate('array_of_z_surface')
-        self.ws.array_of_z_surface = [np.array([[surface_altitude]]) for surface_altitude in surface_altitudes]
+        self.ws.ArrayOfMatrixCreate("array_of_z_surface")
+        self.ws.array_of_z_surface = [
+            np.array([[surface_altitude]]) for surface_altitude in surface_altitudes
+        ]
 
         # list of surface temperatures
-        self.ws.VectorCreate('vector_of_T_surface')
+        self.ws.VectorCreate("vector_of_T_surface")
         self.ws.vector_of_T_surface = surface_tempratures
 
-        self.ws.MatrixCreate('matrix_of_Lat')
+        self.ws.MatrixCreate("matrix_of_Lat")
         matrix_of_Lat = np.array([[geo_pos[0]] for geo_pos in geographical_positions])
         self.ws.matrix_of_Lat = matrix_of_Lat
 
-        self.ws.MatrixCreate('matrix_of_Lon')
+        self.ws.MatrixCreate("matrix_of_Lon")
         matrix_of_Lon = np.array([[geo_pos[1]] for geo_pos in geographical_positions])
         self.ws.matrix_of_Lon = matrix_of_Lon
 
         # List of surface reflectivities
-        self.ws.ArrayOfVectorCreate('array_of_surface_scalar_reflectivity')
+        self.ws.ArrayOfVectorCreate("array_of_surface_scalar_reflectivity")
         self.ws.array_of_surface_scalar_reflectivity = surface_reflectivities
 
         # set name of surface probs
         self.ws.ArrayOfStringSet(self.ws.surface_props_names, ["Skin temperature"])
 
         # list of sun positions
-        self.ws.ArrayOfVectorCreate('array_of_sun_positions')
+        self.ws.ArrayOfVectorCreate("array_of_sun_positions")
         self.ws.array_of_sun_positions = [sun_pos for sun_pos in sun_positions]
-        
-        self.ws.ArrayOfIndexCreate('ArrayOfSuns_Do')
-        self.ws.ArrayOfSuns_Do=[1 if len(sun_pos)>0 else 0 for sun_pos in sun_positions]
+
+        self.ws.ArrayOfIndexCreate("ArrayOfSuns_Do")
+        self.ws.ArrayOfSuns_Do = [
+            1 if len(sun_pos) > 0 else 0 for sun_pos in sun_positions
+        ]
 
         # set absorption
         # =============================================================================
@@ -957,84 +1000,82 @@ class FluxSimulator(FluxSimulationConfig):
         # Use LUT for absorption
         self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
 
-
-
-
         if self.gas_scattering == False:
             self.ws.gas_scatteringOff()
-            
-            
-        self.ws.NumericCreate('DummyVariable')
-        self.ws.IndexCreate('DummyIndex')
-        self.ws.IndexCreate('EmissionIndex')
-        self.ws.IndexCreate('NstreamIndex')
-        self.ws.StringCreate("Text")
-        self.ws.EmissionIndex=int(self.emission)
-        self.ws.NstreamIndex=int(self.nstreams)
-        self.ws.VectorCreate('quadrature_weights')
-        self.ws.quadrature_weights=self.quadrature_weights
-        self.ws.NumericCreate('sun_dist')
-        self.ws.NumericCreate('sun_lat')
-        self.ws.NumericCreate('sun_lon')
-        self.ws.VectorCreate('sun_pos')
 
-        print('starting calculation...\n')
+        self.ws.NumericCreate("DummyVariable")
+        self.ws.IndexCreate("DummyIndex")
+        self.ws.IndexCreate("EmissionIndex")
+        self.ws.IndexCreate("NstreamIndex")
+        self.ws.StringCreate("Text")
+        self.ws.EmissionIndex = int(self.emission)
+        self.ws.NstreamIndex = int(self.nstreams)
+        self.ws.VectorCreate("quadrature_weights")
+        self.ws.quadrature_weights = self.quadrature_weights
+        self.ws.NumericCreate("sun_dist")
+        self.ws.NumericCreate("sun_lat")
+        self.ws.NumericCreate("sun_lon")
+        self.ws.VectorCreate("sun_pos")
+
+        print("starting calculation...\n")
 
         self.ws.IndexSet(self.ws.ybatch_start, start_index)
-        if end_index==-1:            
-            self.ws.IndexSet(self.ws.ybatch_n, len(atmospheres)-start_index)
-            len_of_output=len(atmospheres)-start_index
+        if end_index == -1:
+            self.ws.IndexSet(self.ws.ybatch_n, len(atmospheres) - start_index)
+            len_of_output = len(atmospheres) - start_index
         else:
-            self.ws.IndexSet(self.ws.ybatch_n, end_index-start_index)
-            len_of_output=end_index-start_index
+            self.ws.IndexSet(self.ws.ybatch_n, end_index - start_index)
+            len_of_output = end_index - start_index
 
-        results={}                     
-        results['array_of_irradiance_field_clearsky']=[[]]*len_of_output
-        results['array_of_pressure']=[[]]*len_of_output
-        results['array_of_altitude']=[[]]*len_of_output
-        results['array_of_latitude']=[[]]*len_of_output
-        results['array_of_longitude']=[[]]*len_of_output
-        results['array_of_index']=[[]]*len_of_output
-        
-        
+        results = {}
+        results["array_of_irradiance_field_clearsky"] = [[]] * len_of_output
+        results["array_of_pressure"] = [[]] * len_of_output
+        results["array_of_altitude"] = [[]] * len_of_output
+        results["array_of_latitude"] = [[]] * len_of_output
+        results["array_of_longitude"] = [[]] * len_of_output
+        results["array_of_index"] = [[]] * len_of_output
+
         if self.allsky:
             self.ws.scat_dataCalc(interp_order=1)
             self.ws.Delete(self.ws.scat_data_raw)
             self.ws.scat_dataCheck(check_type="all")
-            
-            self.ws.dobatch_calc_agenda=fsa.dobatch_calc_agenda_allsky(self.ws)
-            self.ws.DOBatchCalc(robust=1)            
-            
-            temp=np.squeeze(np.array(self.ws.dobatch_irradiance_field.value.copy()))    
-        
-            results['array_of_irradiance_field_allsky']=[[]]*len_of_output
+
+            self.ws.dobatch_calc_agenda = fsa.dobatch_calc_agenda_allsky(self.ws)
+            self.ws.DOBatchCalc(robust=1)
+
+            temp = np.squeeze(np.array(self.ws.dobatch_irradiance_field.value.copy()))
+
+            results["array_of_irradiance_field_allsky"] = [[]] * len_of_output
             for i in range(len_of_output):
-                results['array_of_irradiance_field_allsky'][i]=temp[i,:,:]
-            print('...allsky done')
+                results["array_of_irradiance_field_allsky"][i] = temp[i, :, :]
+            print("...allsky done")
 
-            
-    
-        
         else:
-            self.ws.scat_species=[]
-            self.ws.scat_data_checked = 1    
+            self.ws.scat_species = []
+            self.ws.scat_data_checked = 1
             self.ws.Touch(self.ws.scat_data)
-                
-        self.ws.dobatch_calc_agenda=fsa.dobatch_calc_agenda_clearsky(self.ws)
-        self.ws.DOBatchCalc(robust=1)
-        
-        temp=np.squeeze(np.array(self.ws.dobatch_irradiance_field.value.copy()))
-        
-        for i in range(len_of_output):
-            results['array_of_irradiance_field_clearsky'][i]=temp[i,:,:]
-            results['array_of_pressure'][i]=atmospheres[i+start_index].grids[1].value[:]
-            results['array_of_altitude'][i]=atmospheres[i+start_index].data[1,:,0,0]
-            results['array_of_latitude'][i]= self.ws.matrix_of_Lat.value[i+start_index,0]
-            results['array_of_longitude'][i]= self.ws.matrix_of_Lon.value[i+start_index,0]
-            results['array_of_index'][i]= i+start_index
-            
 
-        print('...clearsky done')
-            
-            
+        self.ws.dobatch_calc_agenda = fsa.dobatch_calc_agenda_clearsky(self.ws)
+        self.ws.DOBatchCalc(robust=1)
+
+        temp = np.squeeze(np.array(self.ws.dobatch_irradiance_field.value.copy()))
+
+        for i in range(len_of_output):
+            results["array_of_irradiance_field_clearsky"][i] = temp[i, :, :]
+            results["array_of_pressure"][i] = (
+                atmospheres[i + start_index].grids[1].value[:]
+            )
+            results["array_of_altitude"][i] = atmospheres[i + start_index].data[
+                1, :, 0, 0
+            ]
+            results["array_of_latitude"][i] = self.ws.matrix_of_Lat.value[
+                i + start_index, 0
+            ]
+            results["array_of_longitude"][i] = self.ws.matrix_of_Lon.value[
+                i + start_index, 0
+            ]
+            results["array_of_index"][i] = i + start_index
+
+        print("...clearsky done")
+
         return results
