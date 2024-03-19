@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Thu Sep 29 16:22:44 2022
+
+This module contains the class FluxSimulator. This class is used to calculate the fluxes and heating rates
+for a given atmosphere. The atmosphere can be defined by a GriddedField4 object or by a list of profiles.
+The fluxes are calculated using the ARTS radiative transfer model.
+All quantities are defined in SI units if not stated otherwise. For example, the unit of fluxes is W/m^2 or the
+unit of frequency is Hz.
+
+
 
 @author: Manfred Brath
 """
@@ -287,6 +294,16 @@ class FluxSimulator(FluxSimulationConfig):
         return self.ws.abs_species
     
     def check_species(self):
+        '''
+        This function checks if all species are included in the atm_fields_compact.
+        If not, the species are added with the default values from well_mixed_species_defaults.
+        A ValueError is raised if a species is not included in the atm_fields_compact and 
+        not in well_mixed_species_defaults.
+        
+        Returns
+        -------
+        None.
+        '''
 
         atm_grids=self.ws.atm_fields_compact.value.grids[0]        
 
@@ -617,7 +634,34 @@ class FluxSimulator(FluxSimulationConfig):
         -------
         results : dict
             Dictionary containing the results.
-            
+            results["flux_clearsky_up"] : 1Darray 
+                Clearsky flux up.                
+            results["flux_clearsky_down"] : 1Darray
+                Clearsky flux down.
+            results["spectral_flux_clearsky_up"] : 2Darray
+                Clearsky spectral flux up.
+            results["spectral_flux_clearsky_down"]  : 2Darray
+                Clearsky spectral flux down.
+            results["heating_rate_clearsky"] : 1Darray
+                Clearsky heating rate in K/d.
+            results["pressure"] : 1Darray
+                Pressure.
+            results["altitude"] : 1Darray
+                Altitude.
+            results["f_grid"] : 1Darray  
+                Frequency grid.
+            results["flux_allsky_up"] : 1Darray, optional
+                Allsky flux up.                
+            results["flux_allsky_down"] : 1Darray, optional
+                Allsky flux down.
+            results["spectral_flux_allsky_up"] : 2Darray, optional
+                Allsky spectral flux up.
+            results["spectral_flux_allsky_down"]  : 2Darray, optional
+                Allsky spectral flux down.
+            results["heating_rate_allsky"] : 1Darray, optional
+                Allsky heating rate in K/d.
+
+
         """
 
         # define environment
@@ -838,6 +882,22 @@ class FluxSimulator(FluxSimulationConfig):
         -------
         results : dict
             Dictionary containing the results.
+            results["array_of_irradiance_field_clearsky"] : 3Darray
+                Clearsky irradiance field.  
+            results["array_of_pressure"] : 2Darray
+                Pressure.
+            results["array_of_altitude"] : 2Darray
+                Altitude.
+            results["array_of_latitude"] : 1Darray
+                Latitude.
+            results["array_of_longitude"] : 1Darray
+                Longitude.
+            results["array_of_index"] : 1Darray
+                Index.
+            results["array_of_irradiance_field_allsky"] : 3Darray, optional
+                Allsky irradiance field.
+
+
         """
         
         
