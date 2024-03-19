@@ -10,14 +10,14 @@ Example script to demonstrate the usage of the flux_simulator_module for batch s
 """
 
 import numpy as np
-import flux_simulator_module as fsm
-from pyarts import arts
+import FluxSimulator as fsm
+from pyarts import arts, xml
 
 
 
 #Load test data
-atms=fsm.xml.load('../atmdata/batch_atmospheres/atms_short.xml')
-auxs=fsm.xml.load('../atmdata/batch_atmospheres/auxs_short.xml')    
+atms=xml.load('../atmdata/batch_atmospheres/atms_short.xml')
+auxs=xml.load('../atmdata/batch_atmospheres/auxs_short.xml')    
 
 
 

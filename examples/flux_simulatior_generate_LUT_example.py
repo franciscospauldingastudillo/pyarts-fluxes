@@ -11,7 +11,7 @@ Example script to demonstrate the usage of the flux_simulator_module for generat
 
 import numpy as np
 import matplotlib.pyplot as plt
-import flux_simulator_module as fsm
+import FluxSimulator as fsm
 from pyarts.plots import arts_lookup
 from pyarts import arts
 

@@ -14,5 +14,8 @@
 /arts-catalogs/*
 /auxdata/*
 /scattering_data/*xml*
-*for_arts_paper*
 *.pdf
+examples/cache
+examples/__pycache__
+*egg-info*
+/src/FluxSimulator/__pycache__

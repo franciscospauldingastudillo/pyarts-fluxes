@@ -10,7 +10,7 @@ import os
 import numpy as np
 from pyarts import cat, xml
 from pyarts.workspace import Workspace
-import flux_simulator_agendas as fsa
+from . import _flux_simulator_agendas as fsa
 
 # %%
 
@@ -55,10 +55,10 @@ class FluxSimulationConfig:
 
         # set default paths
         self.catalog_version="2.6.0"
-        self.basename_catalog = "../arts-catalogs"
-        self.basename_scatterer = "../scattering_data/"
+        self.basename_catalog = os.path.join(os.path.dirname(__file__),'..','..','arts-catalogs')
+        self.basename_scatterer = os.path.join(os.path.dirname(__file__),'..','..','scattering_data')
         self.sunspectrumpath = (
-            os.path.join(self.basename_catalog,f"arts-xml-data-{self.catalog_version}/star/Sun/solar_spectrum_May_2004.xml"))
+            os.path.join(self.basename_catalog,os.path.join(f'arts-xml-data-{self.catalog_version}','star','Sun','solar_spectrum_May_2004.xml')))
 
         # set default parameters
         self.Cp = 1.0057e03  # specific heat capacity of dry air [Jkg^{-1}K^{-1}] taken from AMS glossary
@@ -73,7 +73,7 @@ class FluxSimulationConfig:
         self.gas_scattering = False
 
         # set default LUT path
-        self.lut_path = f"../auxdata/{setup_name}/"
+        self.lut_path = os.path.join(os.getcwd(),'cache',setup_name)
         self.lutname_fullpath = os.path.join(self.lut_path, "LUT.xml")
         
         cat.download.retrieve(self.basename_catalog, version=self.catalog_version, verbose=True)

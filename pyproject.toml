@@ -1,0 +1,18 @@
+[project]
+name = "FluxSimulator"
+version = "0.1"
+dependencies = [
+  "numpy"  
+]
+requires-python = ">= 3.9"
+authors = [
+  {name = "Manfred Brath", email = "manfred.brath@uni-hamburg.de" }  
+]
+maintainers = [
+  {name = "Manfred Brath", email = "manfred.brath@uni-hamburg.de"}
+]
+description = "Convenience functions for simulating fluxes with ARTS."
+readme = "readme.md"
+
+[project.urls]
+Homepage = "https://github.com/m-brath/FluxSimulator"

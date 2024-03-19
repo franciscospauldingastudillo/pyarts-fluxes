@@ -10,8 +10,9 @@ Example script to demonstrate the usage of the flux_simulator_module for single 
 """
 import os
 import numpy as np
-import flux_simulator_module as fsm
+import FluxSimulator as fsm
 from pyarts.arts import convert
+from pyarts import xml
 
 
 
@@ -58,10 +59,10 @@ f_grid_lw=convert.kaycm2freq(wvn)
 # =============================================================================
 
 # load atmosphere
-atm = fsm.xml.load(os.path.join(data_path, atm_filename))
+atm = xml.load(os.path.join(data_path, atm_filename))
 
 # load surface data
-aux = fsm.xml.load(os.path.join(data_path, aux_filename))
+aux = xml.load(os.path.join(data_path, aux_filename))
 
 # lat/lon
 lat = aux[4]
