@@ -9,15 +9,15 @@ Get ARTS (pyarts): https://radiativetransfer.org/getarts/
 FluxSimulator requires the following Python packages:
 
 - pyarts 2.6.x
-- numpy
 
 ## Installation
 
 To install FluxSimulator, clone the repository and run the setup script:
 
 ```bash
+git clone https://github.com/m-brath/FluxSimulator.git
 cd FluxSimulator
-python -m pip install .
+python -m pip install --user -e .
 ```
 
 ## Usage
