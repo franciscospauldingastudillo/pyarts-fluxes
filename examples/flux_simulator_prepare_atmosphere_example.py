@@ -5,30 +5,18 @@ Created on Thu Mar 14 15:21:58 2024
 
 @author: Manfred Brath
 
-Example script to demonstrate the usage of the flux_simulator_module for single atmosphere simulations.
+Example script to generate a simple atmosphere for the flux simulator.
+The atmosphere is generated from simple profiles for pressure, temperature,
+H2O, CO2 and LWC. The profiles are used to generate a ARTS GriddedField4 object
+which is needed for the flux simulator. The generated atmosphere can be saved to a
+file in ARTS XML format. 
 
 """
 # %%
 
-import os
 import numpy as np
-import xarray as xr
 from pyarts import xml
 from FluxSimulator import generate_gridded_field_from_profiles
-
-
-setup_name = "single_atmosphere"
-data_path = f"../atmdata/{setup_name}/"
-atm_filename = "atm_idx9108_lat10.975_lon36.975.xml"
-aux_filename = "aux_idx9108_lat10.975_lon36.975.xml"
-
-
-# load atmosphere
-atm = xml.load(os.path.join(data_path, atm_filename))
-
-# load surface data
-aux = xml.load(os.path.join(data_path, aux_filename))
-
 
 # %% generate example atmosphere needed for standard LUT
 # This atmosphere is not intended to be fully realistic, but to be simply
