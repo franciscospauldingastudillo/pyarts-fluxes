@@ -1,1 +1,1 @@
-from ._flux_simulator_module import FluxSimulator
+from ._flux_simulator_module import FluxSimulator, generate_gridded_field_from_profiles

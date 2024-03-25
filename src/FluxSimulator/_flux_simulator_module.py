@@ -15,7 +15,7 @@ unit of frequency is Hz.
 # %%
 import os
 import numpy as np
-from pyarts import cat, xml
+from pyarts import cat, xml, arts
 from pyarts.workspace import Workspace
 from . import _flux_simulator_agendas as fsa
 
@@ -1079,3 +1079,71 @@ class FluxSimulator(FluxSimulationConfig):
         print("...clearsky done")
 
         return results
+
+
+# %% addional functions
+    
+def generate_gridded_field_from_profiles(pressure_profile,temperature_profile,z_field=None,gases={},particulates={}):
+    '''
+    Generate a gridded field from profiles of pressure, temperature, altitude, gases and particulates.
+    
+    Parameters:
+    -----------
+    pressure_profile : array
+        Pressure profile in Pa.
+
+    temperature_profile : array
+        Temperature profile in K.
+
+    z_field : array, optional
+        Altitude profile in m. If not provided, it is calculated from the pressure profile.
+
+    gases : dict
+        Dictionary with the gas species as keys and the volume mixing ratios as values.
+
+    particulates : dict
+        Dictionary with the particulate species with the name of quantity as keys and the quantity values.
+        E.g. {'LWC-mass_density': LWC_profile} mass density of liquid water content in kg/m^3.  
+    Returns:
+    --------
+    atm_field : GriddedField4
+        Gridded field with the profiles of pressure, temperature, altitude, gases and particulates.
+        
+        '''
+
+    atm_field=arts.GriddedField4()
+
+    #Do some checks
+    if len(pressure_profile) != len(temperature_profile):
+        raise ValueError('Pressure and temperature profile must have the same length')
+    
+    if z_field is not None and len(pressure_profile) != len(z_field):
+        raise ValueError('Pressure and altitude profile must have the same length')
+    
+    #Generate altitude field if not provided
+    if z_field is None:
+        z_field = 16e3 * (5 - np.log10(pressure_profile))
+
+    #set up grids
+    abs_species = [f'abs_species-{key}' for key in list(gases.keys())]
+    scat_species = [f'scat_species-{key}' for key in list(particulates.keys())]
+    atm_field.set_grid(0, ['T','z'] + abs_species + scat_species)
+    atm_field.set_grid(1, pressure_profile)
+
+    #set up data
+    atm_field.data = np.zeros((len(atm_field.grids[0]),len(atm_field.grids[1]),1,1))
+    
+    #The first two values are temperature and altitude
+    atm_field.data[0,:,0,0] = temperature_profile
+    atm_field.data[1,:,0,0] = z_field
+
+    #The next values are the gas species
+    for i,key in enumerate(list(gases.keys())):
+        atm_field.data[i+2,:,0,0] = gases[key]    
+
+
+    #The next values are the particulates
+    for i,key in enumerate(list(particulates.keys())):
+        atm_field.data[i+2+len(gases.keys()),:,0,0] = particulates[key]   
+
+    return atm_field
