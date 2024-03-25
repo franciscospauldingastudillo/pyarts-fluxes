@@ -305,8 +305,9 @@ class FluxSimulator(FluxSimulationConfig):
 
     def check_species(self):
         """
-        This function checks if all species are included in the atm_fields_compact.
-        If not, the species are added with the default values from well_mixed_species_defaults.
+        This function checks if all species are included in the atm_fields_compact 
+        that are defined in abs_species. If not, the species are added with the default 
+        values from well_mixed_species_defaults.
         A ValueError is raised if a species is not included in the atm_fields_compact and
         not in well_mixed_species_defaults.
 
@@ -345,8 +346,17 @@ class FluxSimulator(FluxSimulationConfig):
                     )
 
                 else:
-                    raise ValueError(
+
+                    self.ws.atm_fields_compactAddConstant(
+                        self.ws.atm_fields_compact,
+                        f"abs_species-{abs_species_i}",
+                        0.,
+                    )
+
+                    print(
                         f"{abs_species_i} data not included in atmosphere data\n"
+                        f"and it is not in well_mixed_species_defaults\n"
+                        f"I will add this species with value 0."
                     )
 
     def define_particulate_scatterer(
