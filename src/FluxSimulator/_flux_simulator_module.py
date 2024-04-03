@@ -57,7 +57,7 @@ class FluxSimulationConfig:
         self.well_mixed_species_defaults["CO2"] = 415e-6
         self.well_mixed_species_defaults["CH4"] = 1.8e-6
         self.well_mixed_species_defaults["O2"] = 0.21
-        self.well_mixed_species_defaults["O2"] = 0.78
+        self.well_mixed_species_defaults["N2"] = 0.78
 
         # set default paths
         self.catalog_version = "2.6.0"

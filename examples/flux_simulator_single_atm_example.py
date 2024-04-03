@@ -38,14 +38,14 @@ max_wavelength_sw = 5e-6  # [m]
 n_freq_sw = 200
 
 wvl = np.linspace(min_wavelength_sw, max_wavelength_sw, n_freq_sw)  # [m]
-f_grid_sw = convert.wavelen2freq(wvl[::-1])
+f_grid_sw = convert.wavelen2freq(wvl[::-1]) # [Hz]
 
 
-min_wvn = 10
-max_wvn = 3210
+min_wvn = 10 # [cm^-1]
+max_wvn = 3210 # [cm^-1]
 n_freq_lw = 200
 wvn = np.linspace(min_wvn, max_wvn, n_freq_lw)
-f_grid_lw = convert.kaycm2freq(wvn)
+f_grid_lw = convert.kaycm2freq(wvn) 
 
 
 # =============================================================================
@@ -63,17 +63,17 @@ lat = aux[4]
 lon = aux[5]
 
 # surface altitude
-surface_altitude = aux[1]
+surface_altitude = aux[1] # [m]
 
 # surface temperature
-surface_temperature = aux[0]
+surface_temperature = aux[0] # [K]
 
 # surface reflectivity
 surface_reflectivity_sw = 0.3
 surface_reflectivity_lw = 0.05
 
 # sun position
-sun_pos = [1.495978707e11, 0.0, 36.0]
+sun_pos = [1.495978707e11, 0.0, 36.0] # [m], [deg], [deg]
 
 
 # =============================================================================
