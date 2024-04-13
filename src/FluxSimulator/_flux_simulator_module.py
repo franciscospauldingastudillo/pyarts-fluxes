@@ -776,8 +776,11 @@ class FluxSimulator(FluxSimulationConfig):
         # set cloudbox to full atmosphere
         self.ws.cloudboxSetFullAtm()
 
+        # set gas scattering on or off
         if self.gas_scattering == False:
             self.ws.gas_scatteringOff()
+        else:
+            self.ws.gas_scattering_do=1
 
         if self.allsky:
             self.ws.scat_dataCalc(interp_order=1)
@@ -1010,8 +1013,11 @@ class FluxSimulator(FluxSimulationConfig):
         # Use LUT for absorption
         self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
 
+        # set gas scattering on or off
         if self.gas_scattering == False:
             self.ws.gas_scatteringOff()
+        else:
+            self.ws.gas_scattering_do=1
 
         self.ws.NumericCreate("DummyVariable")
         self.ws.IndexCreate("DummyIndex")
