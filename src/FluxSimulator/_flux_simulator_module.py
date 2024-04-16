@@ -305,8 +305,8 @@ class FluxSimulator(FluxSimulationConfig):
 
     def check_species(self):
         """
-        This function checks if all species are included in the atm_fields_compact 
-        that are defined in abs_species. If not, the species are added with the default 
+        This function checks if all species are included in the atm_fields_compact
+        that are defined in abs_species. If not, the species are added with the default
         values from well_mixed_species_defaults.
         A ValueError is raised if a species is not included in the atm_fields_compact and
         not in well_mixed_species_defaults.
@@ -820,6 +820,7 @@ class FluxSimulator(FluxSimulationConfig):
         self.ws.StringSet(self.ws.Text, "Start disort")
         self.ws.Print(self.ws.Text, 0)
 
+        aux_var_allsky=[]
         if self.allsky:
             # allsky flux
             # ====================================================================================
@@ -832,6 +833,11 @@ class FluxSimulator(FluxSimulationConfig):
 
             self.ws.StringSet(self.ws.Text, "disort finished")
             self.ws.Print(self.ws.Text, 0)
+
+            # get auxilary varibles
+            if len(self.ws.disort_aux_vars.value):
+                for i in range(len(self.ws.disort_aux_vars.value)):
+                    aux_var_allsky.append(self.ws.disort_aux.value[i][:]*1.)
 
             spec_flux = self.ws.spectral_irradiance_field.value[:, :, 0, 0, :] * 1.0
 
@@ -847,11 +853,6 @@ class FluxSimulator(FluxSimulationConfig):
 
             heating_rate = np.squeeze(self.ws.heating_rates.value) * 86400  # K/d
 
-        else:
-            heating_rate = np.array([])
-            flux = np.zeros((0, 2))
-            spec_flux = np.zeros((0, 0, 2))
-
         # clearsky flux
         # ====================================================================================
 
@@ -861,6 +862,12 @@ class FluxSimulator(FluxSimulationConfig):
             Npfct=-1,
             emission=self.emission,
         )
+
+        # get auxilary varibles
+        aux_var_clearsky=[]
+        if len(self.ws.disort_aux_vars.value):
+            for i in range(len(self.ws.disort_aux_vars.value)):
+                aux_var_clearsky.append(self.ws.disort_aux.value[i][:]*1.)
 
         spec_flux_cs = self.ws.spectral_irradiance_field.value[:, :, 0, 0, :] * 1.0
 
@@ -888,6 +895,7 @@ class FluxSimulator(FluxSimulationConfig):
         results["pressure"] = self.ws.p_grid.value[:]
         results["altitude"] = self.ws.z_field.value[:, 0, 0]
         results["f_grid"] = self.ws.f_grid.value[:]
+        results["aux_var_clearsky"] = aux_var_clearsky
 
         if self.allsky:
             results["flux_allsky_up"] = flux[:, 1]
@@ -895,6 +903,7 @@ class FluxSimulator(FluxSimulationConfig):
             results["spectral_flux_allsky_up"] = spec_flux[:, :, 1]
             results["spectral_flux_allsky_down"] = spec_flux[:, :, 0]
             results["heating_rate_allsky"] = heating_rate
+            results["aux_var_allsky"] = aux_var_allsky
 
         return results
 
@@ -1098,11 +1107,11 @@ class FluxSimulator(FluxSimulationConfig):
 
 
 # %% addional functions
-    
+
 def generate_gridded_field_from_profiles(pressure_profile,temperature_profile,z_field=None,gases={},particulates={}):
     '''
     Generate a gridded field from profiles of pressure, temperature, altitude, gases and particulates.
-    
+
     Parameters:
     -----------
     pressure_profile : array
@@ -1119,12 +1128,12 @@ def generate_gridded_field_from_profiles(pressure_profile,temperature_profile,z_
 
     particulates : dict
         Dictionary with the particulate species with the name of quantity as keys and the quantity values.
-        E.g. {'LWC-mass_density': LWC_profile} mass density of liquid water content in kg/m^3.  
+        E.g. {'LWC-mass_density': LWC_profile} mass density of liquid water content in kg/m^3.
     Returns:
     --------
     atm_field : GriddedField4
         Gridded field with the profiles of pressure, temperature, altitude, gases and particulates.
-        
+
         '''
 
     atm_field=arts.GriddedField4()
@@ -1132,10 +1141,10 @@ def generate_gridded_field_from_profiles(pressure_profile,temperature_profile,z_
     #Do some checks
     if len(pressure_profile) != len(temperature_profile):
         raise ValueError('Pressure and temperature profile must have the same length')
-    
+
     if z_field is not None and len(pressure_profile) != len(z_field):
         raise ValueError('Pressure and altitude profile must have the same length')
-    
+
     #Generate altitude field if not provided
     if z_field is None:
         z_field = 16e3 * (5 - np.log10(pressure_profile))
@@ -1148,18 +1157,18 @@ def generate_gridded_field_from_profiles(pressure_profile,temperature_profile,z_
 
     #set up data
     atm_field.data = np.zeros((len(atm_field.grids[0]),len(atm_field.grids[1]),1,1))
-    
+
     #The first two values are temperature and altitude
     atm_field.data[0,:,0,0] = temperature_profile
     atm_field.data[1,:,0,0] = z_field
 
     #The next values are the gas species
     for i,key in enumerate(list(gases.keys())):
-        atm_field.data[i+2,:,0,0] = gases[key]    
+        atm_field.data[i+2,:,0,0] = gases[key]
 
 
     #The next values are the particulates
     for i,key in enumerate(list(particulates.keys())):
-        atm_field.data[i+2+len(gases.keys()),:,0,0] = particulates[key]   
+        atm_field.data[i+2+len(gases.keys()),:,0,0] = particulates[key]
 
     return atm_field
