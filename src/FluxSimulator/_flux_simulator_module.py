@@ -15,7 +15,7 @@ unit of frequency is Hz.
 # %%
 import os
 import numpy as np
-from pyarts import cat, xml, arts
+from pyarts import cat, xml, arts, version
 from pyarts.workspace import Workspace
 from . import _flux_simulator_agendas as fsa
 
@@ -27,7 +27,7 @@ class FluxSimulationConfig:
     This class defines the basic setup for the flux simulator.
     """
 
-    def __init__(self, setup_name):
+    def __init__(self, setup_name, catalog_version = None):
         """
         Parameters
         ----------
@@ -38,6 +38,16 @@ class FluxSimulationConfig:
         -------
         None.
         """
+
+        #check version
+        version_min=[2,6,2]
+        v_list=version.split('.')
+        major=int(v_list[0])==version_min[0]
+        minor=int(v_list[1])==version_min[1]
+        patch=int(v_list[2])>=version_min[2]
+        
+        if not major or not minor or not patch:
+            raise ValueError(f"Please use pyarts version >= {'.'.join(str(i) for i in version_min)}.")
 
         self.setup_name = setup_name
 
@@ -60,22 +70,14 @@ class FluxSimulationConfig:
         self.well_mixed_species_defaults["N2"] = 0.78
 
         # set default paths
-        self.catalog_version = "2.6.0"
-        self.basename_catalog = os.path.join(
-            os.path.dirname(__file__), "..", "..", "arts-catalogs"
-        )
+        self.catalog_version = catalog_version
         self.basename_scatterer = os.path.join(
             os.path.dirname(__file__), "..", "..", "scattering_data"
         )
-        self.sunspectrumpath = os.path.join(
-            self.basename_catalog,
-            os.path.join(
-                f"arts-xml-data-{self.catalog_version}",
-                "star",
-                "Sun",
-                "solar_spectrum_May_2004.xml",
-            ),
-        )
+
+        # Be default the solar spectrum is set to the May 2004 spectrum
+        # Other options are "Blackbody" or a path to a spectrum file
+        self.sunspectrumtype = "SpectrumMay2004"
 
         # set default parameters
         self.Cp = 1.0057e03  # specific heat capacity of dry air [Jkg^{-1}K^{-1}] taken from AMS glossary
@@ -93,8 +95,9 @@ class FluxSimulationConfig:
         self.lut_path = os.path.join(os.getcwd(), "cache", setup_name)
         self.lutname_fullpath = os.path.join(self.lut_path, "LUT.xml")
 
+        
         cat.download.retrieve(
-            self.basename_catalog, version=self.catalog_version, verbose=True
+            version=self.catalog_version, verbose=True
         )
 
     def generateLutDirectory(self, alt_path=None):
@@ -117,21 +120,18 @@ class FluxSimulationConfig:
 
     def set_paths(
         self,
-        basename_catalog=None,
         basename_scatterer=None,
-        sunspectrumfile=None,
         lut_path=None,
     ):
         """
         This function sets some paths. If a path is not given, the default path is used.
+        This function is needed only if you want to use different paths than the default paths.
 
         Parameters
         ----------
 
         basename_scatterer : str, optional
             Path to the scatterer. The default is None.
-        sunspectrumfile : str, optional
-            Path to the sun spectrum. The default is None.
         lut_path : str, optional
             Path to the LUT. The default is None.
 
@@ -143,9 +143,6 @@ class FluxSimulationConfig:
 
         if basename_scatterer is not None:
             self.basename_scatterer = basename_scatterer
-
-        if sunspectrumfile is not None:
-            self.sunspectrumpath = sunspectrumfile
 
         if lut_path is not None:
             self.generateLutDirectory(lut_path)
@@ -161,9 +158,8 @@ class FluxSimulationConfig:
         """
 
         Paths = {}
-        Paths["basename_catalog"] = self.basename_catalog
         Paths["basename_scatterer"] = self.basename_scatterer
-        Paths["sunspectrumpath"] = self.sunspectrumpath
+        Paths["sunspectrumpath"] = self.sunspectrumtype
         Paths["lut_path"] = self.lut_path
         Paths["lutname_fullpath"] = self.lutname_fullpath
 
@@ -178,9 +174,7 @@ class FluxSimulationConfig:
         None.
         """
 
-        print("basename_catalog: ", self.basename_catalog)
         print("basename_scatterer: ", self.basename_scatterer)
-        print("sunspectrumpath: ", self.sunspectrumpath)
         print("lut_path: ", self.lut_path)
         print("lutname_fullpath: ", self.lutname_fullpath)
 
@@ -201,12 +195,13 @@ class FluxSimulationConfig:
         print("quadrature_weights: ", self.quadrature_weights)
         print("allsky: ", self.allsky)
         print("gas_scattering: ", self.gas_scattering)
+        print("sunspectrumtype: ", self.sunspectrumtype)
         self.print_paths()
 
 
 class FluxSimulator(FluxSimulationConfig):
 
-    def __init__(self, setup_name):
+    def __init__(self, setup_name, catalog_version = None):
         """
         This class defines the ARTS setup.
 
@@ -219,7 +214,7 @@ class FluxSimulator(FluxSimulationConfig):
         None.
         """
 
-        super().__init__(setup_name)
+        super().__init__(setup_name, catalog_version = catalog_version)
 
         # start ARTS workspace
         self.ws = Workspace()
@@ -719,12 +714,18 @@ class FluxSimulator(FluxSimulationConfig):
 
         if len(sun_pos) > 0:
             # set sun source
-            if len(self.sunspectrumpath) == 0:
+            if self.sunspectrumtype == "Blackbody":
                 self.ws.sunsAddSingleBlackbody(
                     distance=sun_pos[0], latitude=sun_pos[1], longitude=sun_pos[2]
                 )
-            else:
-                sunspectrum = xml.load(self.sunspectrumpath)
+            elif len(self.sunspectrumtype) > 0:
+                sunspectrum=arts.GriddedField2()
+                if self.sunspectrumtype == "SpectrumMay2004":
+                    sunspectrum.readxml('star/Sun/solar_spectrum_May_2004.xml')
+                else:
+                    sunspectrum.readxml(self.sunspectrumtype)
+
+
                 self.ws.sunsAddSingleFromGrid(
                     sun_spectrum_raw=sunspectrum,
                     temperature=0,
@@ -732,6 +733,10 @@ class FluxSimulator(FluxSimulationConfig):
                     latitude=sun_pos[1],
                     longitude=sun_pos[2],
                 )
+            else:
+                print("No sun source defined!")
+                print("Setting suns off!")
+                self.ws.sunsOff()
 
         else:
             self.ws.sunsOff()
@@ -968,11 +973,25 @@ class FluxSimulator(FluxSimulationConfig):
         # define environment
         # =============================================================================
 
-        if len(self.sunspectrumpath) == 0:
-            raise ValueError("sunspectrumpath not set!")
-        else:
+        # if len(self.sunspectrumtype) == 0:
+        #     raise ValueError("sunspectrumpath not set!")
+        # else:
+        #     self.ws.GriddedField2Create("sunspectrum")
+        #     self.ws.sunspectrum = xml.load(self.sunspectrumtype)
+        # set sun source
+        # set sun source
+        if self.sunspectrumtype == "Blackbody":
+            raise ValueError("Blackbody sun not supported for batch !")
+        elif len(self.sunspectrumtype) > 0:
+            sunspectrum=arts.GriddedField2()
+            if self.sunspectrumtype == "SpectrumMay2004":
+                sunspectrum.readxml('star/Sun/solar_spectrum_May_2004.xml')
+            else:
+                sunspectrum.readxml(self.sunspectrumtype) 
             self.ws.GriddedField2Create("sunspectrum")
-            self.ws.sunspectrum = xml.load(self.sunspectrumpath)
+            self.ws.sunspectrum = sunspectrum
+        else:
+            raise ValueError("sunspectrumpath not set!")
 
         # prepare atmosphere
         self.ws.batch_atm_fields_compact = atmospheres

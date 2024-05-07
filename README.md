@@ -8,7 +8,7 @@ Get ARTS (pyarts): https://radiativetransfer.org/getarts/
 
 FluxSimulator requires the following Python packages:
 
-- pyarts 2.6.x
+- pyarts >=2.6.2
 
 ## Installation
 
