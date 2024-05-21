@@ -2,7 +2,7 @@
 name = "FluxSimulator"
 version = "0.1"
 dependencies = [
-  "numpy"  
+  "numpy, matplotlib"  
 ]
 requires-python = ">= 3.9"
 authors = [
@@ -11,7 +11,7 @@ authors = [
 maintainers = [
   {name = "Manfred Brath", email = "manfred.brath@uni-hamburg.de"}
 ]
-description = "Convenience functions for simulating fluxes with ARTS."
+description = "Easy-to-use wrapper to calculate radiative fluxes with ARTS."
 readme = "readme.md"
 
 [project.urls]
