@@ -767,8 +767,12 @@ class FluxSimulator(FluxSimulationConfig):
         self.ws.surface_skin_t = T_surface
 
         # set geographical position
-        self.ws.lat_true = [geographical_position[0]]
-        self.ws.lon_true = [geographical_position[1]]
+        if len(geographical_position) == 0:
+            self.ws.lat_true = [0]
+            self.ws.lon_true = [0]
+        else:
+            self.ws.lat_true = [geographical_position[0]]
+            self.ws.lon_true = [geographical_position[1]]
 
         # surface reflectivities
         self.ws.surface_scalar_reflectivity = [surface_reflectivity]
