@@ -443,7 +443,7 @@ class FluxSimulator(FluxSimulationConfig):
         self,
         t_min=150.0,
         t_max=350.0,
-        p_step=0.5,
+        p_step=0.05,
         lines_speedup_option="None",
         F_grid_from_LUT=False,
         cutoff=True,
