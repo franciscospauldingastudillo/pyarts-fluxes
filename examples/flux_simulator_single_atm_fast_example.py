@@ -82,7 +82,7 @@ sun_pos = [1.495978707e11, 0.0, 36.0] # [m], [deg], [deg]
 # longwave simulation
 # =============================================================================
 
-LW_flux_simulator = fsm.FluxSimulator(setup_name + "_LW",catalog_version="2.6.2")
+LW_flux_simulator = fsm.FluxSimulator(setup_name + "_LW")
 LW_flux_simulator.ws.f_grid.readxml('planets/Earth/Optimized-Flux-Frequencies/LW-flux-optimized-f_grid.xml')
 LW_flux_simulator.quadrature_weights.readxml('planets/Earth/Optimized-Flux-Frequencies/LW-flux-optimized-quadrature_weights.xml')
 
@@ -100,7 +100,7 @@ results_lw = LW_flux_simulator.flux_simulator_single_profile(
 # shortwave simulation
 # =============================================================================
 
-SW_flux_simulator = fsm.FluxSimulator(setup_name + "_SW",catalog_version="2.6.2")
+SW_flux_simulator = fsm.FluxSimulator(setup_name + "_SW")
 SW_flux_simulator.ws.f_grid.readxml('planets/Earth/Optimized-Flux-Frequencies/SW-flux-optimized-f_grid.xml')
 SW_flux_simulator.quadrature_weights.readxml('planets/Earth/Optimized-Flux-Frequencies/SW-flux-optimized-quadrature_weights.xml')
 SW_flux_simulator.emission = 0
