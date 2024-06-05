@@ -20,8 +20,8 @@ from pyarts import xml
 # =============================================================================
 
 
-setup_name = "single_atmosphere"
-data_path = f"../atmdata/{setup_name}/"
+setup_name = "single_atmosphere_fast_exam"
+data_path = f"../atmdata/single_atmosphere/"
 atm_filename = "atm_idx9108_lat10.975_lon36.975.xml"
 aux_filename = "aux_idx9108_lat10.975_lon36.975.xml"
 # atm_filename = "atm_idx9919_lat20.975_lon-141.025.xml"
@@ -76,53 +76,14 @@ surface_reflectivity_lw = 0.05
 sun_pos = [1.495978707e11, 0.0, 36.0] # [m], [deg], [deg]
 
 
+
 # =============================================================================
 # longwave simulation
 # =============================================================================
 
-LW_flux_simulator = fsm.FluxSimulator(setup_name + "_LW")
-LW_flux_simulator.ws.f_grid = f_grid_lw
-
-
-# scattering data can be downloaded from Zenodo 
-# https://doi.org/10.5281/zenodo.10807525 
-# or from the arts-xml-data repository. 
-# By default, the data is expected to be in the directory 
-# "/scattering_data/".
-# The path can be changed by using the set_paths function
-# LW_flux_simulator.set_paths(basename_scatterer="your path to the scattering data")
-
-#Setup scatterers for the longwave simulation
-LW_flux_simulator.define_particulate_scatterer(
-    "LWC",
-    "pnd_agenda_CGLWC",
-    "MieSpheres_H2O_liquid",
-    ["mass_density"]
-)
-LW_flux_simulator.define_particulate_scatterer(
-    "RWC",
-    "pnd_agenda_CGRWC",
-    "MieSpheres_H2O_liquid",
-    ["mass_density"]
-)
-LW_flux_simulator.define_particulate_scatterer(
-    "IWC",
-    "pnd_agenda_CGIWC",
-    "HexagonalColumn-ModeratelyRough",
-    ["mass_density"]
-)
-LW_flux_simulator.define_particulate_scatterer(
-    "SWC",
-    "pnd_agenda_CGSWC_tropic",
-    "10-PlateAggregate-ModeratelyRough",
-    ["mass_density"]
-)
-LW_flux_simulator.define_particulate_scatterer(
-    "GWC",
-    "pnd_agenda_CGGWC",
-    "Droxtal-SeverelyRough",
-    ["mass_density"]
-)
+LW_flux_simulator = fsm.FluxSimulator(setup_name + "_LW",catalog_version="2.6.2")
+LW_flux_simulator.ws.f_grid.readxml('planets/Earth/Optimized-Flux-Frequencies/LW-flux-optimized-f_grid.xml')
+LW_flux_simulator.quadrature_weights.readxml('planets/Earth/Optimized-Flux-Frequencies/LW-flux-optimized-quadrature_weights.xml')
 
 results_lw = LW_flux_simulator.flux_simulator_single_profile(
     atm,
@@ -138,45 +99,11 @@ results_lw = LW_flux_simulator.flux_simulator_single_profile(
 # shortwave simulation
 # =============================================================================
 
-SW_flux_simulator = fsm.FluxSimulator(setup_name + "_SW")
-SW_flux_simulator.ws.f_grid = f_grid_sw
+SW_flux_simulator = fsm.FluxSimulator(setup_name + "_SW",catalog_version="2.6.2")
+SW_flux_simulator.ws.f_grid.readxml('planets/Earth/Optimized-Flux-Frequencies/SW-flux-optimized-f_grid.xml')
+SW_flux_simulator.quadrature_weights.readxml('planets/Earth/Optimized-Flux-Frequencies/SW-flux-optimized-quadrature_weights.xml')
 SW_flux_simulator.emission = 0
 SW_flux_simulator.gas_scattering = True
-
-
-#Setup scatterers for the shortwave simulation
-SW_flux_simulator.define_particulate_scatterer(
-    "LWC",
-    "pnd_agenda_CGLWC",
-    "MieSpheres_H2O_liquid",
-    ["mass_density"]
-)
-SW_flux_simulator.define_particulate_scatterer(
-    "RWC",
-    "pnd_agenda_CGRWC",
-    "MieSpheres_H2O_liquid",
-    ["mass_density"]
-)
-SW_flux_simulator.define_particulate_scatterer(
-    "IWC",
-    "pnd_agenda_CGIWC",
-    "HexagonalColumn-ModeratelyRough"
-    ["mass_density"]
-)
-SW_flux_simulator.define_particulate_scatterer(
-    "SWC",
-    "pnd_agenda_CGSWC_tropic",
-    "10-PlateAggregate-ModeratelyRough",
-    ["mass_density"]
-)
-SW_flux_simulator.define_particulate_scatterer(
-    "GWC",
-    "pnd_agenda_CGGWC",
-    "Droxtal-SeverelyRough",
-    ["mass_density"]
-)
-
-
 
 results_sw = SW_flux_simulator.flux_simulator_single_profile(
     atm,

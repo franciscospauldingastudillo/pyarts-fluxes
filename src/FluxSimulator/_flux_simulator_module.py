@@ -83,7 +83,7 @@ class FluxSimulationConfig:
         self.Cp = 1.0057e03  # specific heat capacity of dry air [Jkg^{-1}K^{-1}] taken from AMS glossary
         self.nstreams = 10
         self.emission = 1
-        self.quadrature_weights = np.array([])
+        self.quadrature_weights = arts.Vector([])
 
         # set if allsky or clearsky
         self.allsky = False
