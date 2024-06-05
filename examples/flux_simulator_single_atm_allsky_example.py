@@ -5,7 +5,8 @@ Created on Thu Mar 14 15:21:58 2024
 
 @author: Manfred Brath
 
-Example script to demonstrate the usage of the flux_simulator_module for single atmosphere simulations.
+Example script to demonstrate the usage of the flux_simulator_module for
+a single atmosphere all sky simulations.
 
 """
 import os
