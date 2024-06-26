@@ -51,7 +51,7 @@ def create_surface_agendas_in_WS(ws):
     iy_surface_agenda_list = [
         "iy_surface_agenda__FlatUserReflectivity",
         "iy_surface_agenda__FlatFresnel",
-        "iy_surface_agenda_Lambertian",
+        "iy_surface_agenda__Lambertian",
     ]
 
     for iy_surface_agenda in iy_surface_agenda_list:
@@ -82,12 +82,20 @@ def iy_surface_agenda__FlatFresnel(ws):
 
 # surface scattering agenda for a lambertian surface with user defined reflectivity
 @arts_agenda
-def iy_surface_agenda_Lambertian(ws):
+def iy_surface_agenda__Lambertian(ws):
     ws.iySurfaceInit()
     ws.Ignore(ws.dsurface_rmatrix_dx)
     ws.Ignore(ws.dsurface_emission_dx)
     ws.iySurfaceLambertian()
     ws.iySurfaceLambertianDirect()
+
+
+def set_iy_surface_agendas(ws):
+    ws.iy_surface_agenda__FlatUserReflectivity = iy_surface_agenda__FlatUserReflectivity
+    ws.iy_surface_agenda__FlatFresnel = iy_surface_agenda__FlatFresnel
+    ws.iy_surface_agenda__Lambertian = iy_surface_agenda__Lambertian
+
+    return ws
 
 
 # =============================================================================
