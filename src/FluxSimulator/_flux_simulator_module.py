@@ -45,7 +45,7 @@ class FluxSimulationConfig:
         major=int(v_list[0])==version_min[0]
         minor=int(v_list[1])==version_min[1]
         patch=int(v_list[2])>=version_min[2]
-        
+
         if not major or not minor or not patch:
             raise ValueError(f"Please use pyarts version >= {'.'.join(str(i) for i in version_min)}.")
 
@@ -95,7 +95,7 @@ class FluxSimulationConfig:
         self.lut_path = os.path.join(os.getcwd(), "cache", setup_name)
         self.lutname_fullpath = os.path.join(self.lut_path, "LUT.xml")
 
-        
+
         cat.download.retrieve(
             version=self.catalog_version, verbose=True
         )
@@ -235,6 +235,7 @@ class FluxSimulator(FluxSimulationConfig):
         self.ws = fsa.set_pnd_agendas_SB06(self.ws)
         self.ws = fsa.set_pnd_agendas_MY05(self.ws)
         self.ws = fsa.set_pnd_agendas_CG(self.ws)
+        self.ws = fsa.set_iy_surface_agendas(self.ws)
 
         # Initialize scattering variables
         self.ws.ScatSpeciesInit()
@@ -991,7 +992,7 @@ class FluxSimulator(FluxSimulationConfig):
             if self.sunspectrumtype == "SpectrumMay2004":
                 sunspectrum.readxml('star/Sun/solar_spectrum_May_2004.xml')
             else:
-                sunspectrum.readxml(self.sunspectrumtype) 
+                sunspectrum.readxml(self.sunspectrumtype)
             self.ws.GriddedField2Create("sunspectrum")
             self.ws.sunspectrum = sunspectrum
         else:
