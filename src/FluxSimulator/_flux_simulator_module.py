@@ -451,6 +451,7 @@ class FluxSimulator(FluxSimulationConfig):
         fmin=0,
         fmax=np.inf,
         recalc=False,
+        nls_pert=[],
     ):
         """
         This function calculates the LUT using the wide setup.
@@ -475,6 +476,9 @@ class FluxSimulator(FluxSimulationConfig):
             Maximum frequency.
         recalc : bool
             If True, the LUT is recalculated.
+        nls_pert: list of pertuberations
+            Pertuberations used for non-linear species,
+            if empty, falls back to internal default of arts
 
         Returns
         -------
@@ -509,6 +513,10 @@ class FluxSimulator(FluxSimulationConfig):
             # setup LUT
             print("...setting up lut\n")
             self.ws.abs_lookupSetupWide(t_min=t_min, t_max=t_max, p_step=p_step)
+
+            #add different nls_pert
+            if len(nls_pert)>0:
+                self.ws.abs_nls_pert=nls_pert
 
             # Setup propagation matrix agenda (absorption)
             self.ws.propmat_clearsky_agendaAuto(
@@ -654,6 +662,7 @@ class FluxSimulator(FluxSimulationConfig):
         surface_reflectivity,
         geographical_position=np.array([]),
         sun_pos=np.array([]),
+        **kwargs,
     ):
         """
         This function calculates the fluxes and heating rates for a single atmosphere.
@@ -753,7 +762,7 @@ class FluxSimulator(FluxSimulationConfig):
         print("setting up absorption...\n")
 
         # Calculate or load LUT
-        self.get_lookuptableWide()
+        self.get_lookuptableWide(**kwargs)
 
         # Use LUT for absorption
         self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
