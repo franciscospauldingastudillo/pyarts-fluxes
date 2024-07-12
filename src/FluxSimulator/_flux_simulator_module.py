@@ -451,7 +451,7 @@ class FluxSimulator(FluxSimulationConfig):
         fmin=0,
         fmax=np.inf,
         recalc=False,
-        nls_pert=[0,1e-6,1e-3,1,1e1,1e2],
+        nls_pert=[],
     ):
         """
         This function calculates the LUT using the wide setup.
