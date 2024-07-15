@@ -15,6 +15,7 @@ unit of frequency is Hz.
 # %%
 import os
 import numpy as np
+from copy import deepcopy
 from pyarts import cat, xml, arts, version
 from pyarts.workspace import Workspace
 from . import _flux_simulator_agendas as fsa
@@ -298,6 +299,34 @@ class FluxSimulator(FluxSimulationConfig):
         """
 
         return self.ws.abs_species
+
+    def add_species(self, list_of_species, verbose=False):
+        """
+        Add new species to the existing species list.
+
+        Parameters:
+        - list_of_species (list): A list of species to be added.
+        - verbose (bool, optional): If True, print the species that are appended. Default is False.
+
+        Returns:
+        None
+        """
+
+        #get species list from class NOT from WS
+        existing_species = self.species
+
+        new_species = deepcopy(existing_species)
+
+        for spc in list_of_species:
+            temp = [j for j, x in enumerate(existing_species) if str(spc) in x]
+
+            if len(temp) == 0:
+                new_species.append(str(spc))
+
+                if verbose:
+                    print(f'appended: {str(spc)}')
+
+        self.set_species(new_species)
 
     def check_species(self):
         """
@@ -634,6 +663,97 @@ class FluxSimulator(FluxSimulationConfig):
             print("...setting up lut\n")
             self.ws.atmfields_checked = 1
             self.ws.abs_lookupSetup(p_step=p_step)
+
+            # Setup propagation matrix agenda (absorption)
+            self.ws.propmat_clearsky_agendaAuto(
+                lines_speedup_option=lines_speedup_option
+            )
+
+            if cutoff == True:
+                self.ws.lbl_checked = 1
+            else:
+                self.ws.lbl_checkedCalc()
+
+            # calculate LUT
+            print("...calculating lut\n")
+            self.ws.abs_lookupCalc()
+
+            # save Lut
+            self.ws.WriteXML("binary", self.ws.abs_lookup, self.lutname_fullpath)
+
+            print("LUT calculation finished!")
+
+    def get_lookuptableBatch(
+        self,
+        batch_atmospheres,
+        p_step=0.05,
+        lines_speedup_option="None",
+        F_grid_from_LUT=False,
+        cutoff=True,
+        fmin=0,
+        fmax=np.inf,
+        recalc=False,
+    ):
+        """
+        This function calculates the LUT using the batch setup.
+        It inputs a batch of atmospheres and calculates the Lut for this batch.
+
+
+        Parameters
+        ----------
+        batch_atmospheres : ArrayOfGriddedField4
+            Batch of atmospheres.
+        p_step : float
+            Pressure step.
+        lines_speedup_option : str
+            Lines speedup option.
+        F_grid_from_LUT : bool
+            If True, the frequency grid is taken from the LUT.
+        cutoff : bool
+            If True, cutoff is used.
+        fmin : float
+            Minimum frequency.
+        fmax : float
+            Maximum frequency.
+        recalc : bool
+            If True, the LUT is recalculated.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        # use saved LUT. recalc only when necessary
+        if recalc == False:
+            try:
+                self.readLUT(F_grid_from_LUT=F_grid_from_LUT, fmin=fmin, fmax=fmax)
+                print("...using stored LUT\n")
+
+            # recalc LUT
+            except RuntimeError:
+                recalc = True
+
+        if recalc == True:
+            print("LUT not found or does not fit.\n So, recalc...\n")
+
+            # generate LUT path
+            self.generateLutDirectory()
+
+            # read spectroscopic data
+            print("...reading data\n")
+            self.ws.ReadXsecData(basename="xsec/")
+            self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(basename="lines/")
+
+            #set atmosphere
+            self.ws.batch_atm_fields_compact = batch_atmospheres
+
+            if cutoff == True:
+                self.ws.abs_lines_per_speciesCutoff(option="ByLine", value=750e9)
+
+            # setup LUT
+            print("...setting up lut\n")
+            self.ws.abs_lookupSetupBatch(p_step = p_step)
 
             # Setup propagation matrix agenda (absorption)
             self.ws.propmat_clearsky_agendaAuto(
