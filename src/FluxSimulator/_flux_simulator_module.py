@@ -271,6 +271,110 @@ class FluxSimulator(FluxSimulationConfig):
         # set absorption species
         self.ws.abs_speciesSet(species=self.species)
 
+    def set_sun(self, sun_pos=[]):
+        """
+        Set the sun source for the flux simulator.
+
+        Args:
+            sun_pos (list, optional): The position of the sun source. Defaults to an empty list.
+
+        Returns:
+            None
+        """
+        try:
+            if len(self.ws.suns.value) > 0:
+                self.ws.Delete(self.ws.suns)
+                self.ws.Touch(self.ws.suns)
+        except:
+            pass
+
+        try:
+            len(self.ws.f_grid.value)
+
+        except RuntimeError:
+            print("No f_grid defined!")
+            print("Please define a f_grid first!")
+            return
+
+
+        # set sun source
+        if self.sunspectrumtype == "Blackbody":
+            if len(sun_pos) > 0:
+                self.ws.sunsAddSingleBlackbody(
+                    distance=sun_pos[0], latitude=sun_pos[1], longitude=sun_pos[2]
+                )
+            else:
+                self.ws.sunsAddSingleBlackbody()
+
+        elif len(self.sunspectrumtype) > 0:
+            sunspectrum=arts.GriddedField2()
+            if self.sunspectrumtype == "SpectrumMay2004":
+                sunspectrum.readxml('star/Sun/solar_spectrum_May_2004.xml')
+            else:
+                sunspectrum.readxml(self.sunspectrumtype)
+
+            if len(sun_pos) > 0:
+                self.ws.sunsAddSingleFromGrid(
+                    sun_spectrum_raw=sunspectrum,
+                    temperature=0,
+                    distance=sun_pos[0],
+                    latitude=sun_pos[1],
+                    longitude=sun_pos[2],
+                )
+            else:
+                self.ws.sunsAddSingleFromGrid(
+                    sun_spectrum_raw=sunspectrum,
+                    temperature=0
+                )
+        else:
+            print("No sun source defined!")
+            print("Setting suns off!")
+            self.ws.sunsOff()
+
+    def get_sun(self):
+            """
+            Returns the sun from the ARTS WS.
+
+            Returns:
+                float: The value of the first sun.
+            """
+            return self.ws.suns.value[0]
+
+    def scale_sun_to_specific_TSI_at_TOA(self, TSI, latitude, longitude, TOA_altitude):
+
+        try:
+            len(self.ws.suns.value)
+        except:
+            print("No sun source defined!")
+            print("Please define a sun source first!")
+            return
+
+        r_toa = self.ws.refellipsoid.value[0]+TOA_altitude
+
+        x_toa = r_toa*np.cos(np.deg2rad(latitude))*np.cos(np.deg2rad(longitude))
+        y_toa = r_toa*np.cos(np.deg2rad(latitude))*np.sin(np.deg2rad(longitude))
+        z_toa = r_toa*np.sin(np.deg2rad(latitude))
+
+        r_sun = self.ws.suns.value[0].distance
+        latitude_sun = self.ws.suns.value[0].latitude
+        lomgitude_sun = self.ws.suns.value[0].longitude
+
+        x_sun = r_sun*np.cos(np.deg2rad(latitude_sun))*np.cos(np.deg2rad(lomgitude_sun))
+        y_sun = r_sun*np.cos(np.deg2rad(latitude_sun))*np.sin(np.deg2rad(lomgitude_sun))
+        z_sun = r_sun*np.sin(np.deg2rad(latitude_sun))
+
+        distance = np.sqrt((x_sun-x_toa)**2+(y_sun-y_toa)**2+(z_sun-z_toa)**2)
+
+        TSI_sun = np.trapz(self.ws.suns.value[0].spectrum[:,0],self.ws.f_grid.value)
+
+        Radius_sun = self.ws.suns.value[0].radius
+        sin_alpha2=Radius_sun**2/(distance**2+Radius_sun**2)
+
+        scale_factor = TSI/TSI_sun/sin_alpha2
+
+        self.ws.suns.value[0].spectrum*=scale_factor
+
+
     def set_species(self, species):
         """
         This function sets the gas absorption species.
@@ -781,7 +885,6 @@ class FluxSimulator(FluxSimulationConfig):
         z_surface,
         surface_reflectivity,
         geographical_position=np.array([]),
-        sun_pos=np.array([]),
         **kwargs,
     ):
         """
@@ -801,9 +904,8 @@ class FluxSimulator(FluxSimulationConfig):
         surface_reflectivity : float or 1Darray
             Surface reflectivity.
         geographical_position : 1Darray, default is np.array([])
-            Geographical position.
-        sun_pos : 1Darray, default is np.array([])
-            Sun position.
+            Geographical position of the simulated atmosphere.
+            Needs to be set for solar simulations.
 
         Returns
         -------
@@ -842,34 +944,6 @@ class FluxSimulator(FluxSimulationConfig):
         # define environment
         # =============================================================================
 
-        if len(sun_pos) > 0:
-            # set sun source
-            if self.sunspectrumtype == "Blackbody":
-                self.ws.sunsAddSingleBlackbody(
-                    distance=sun_pos[0], latitude=sun_pos[1], longitude=sun_pos[2]
-                )
-            elif len(self.sunspectrumtype) > 0:
-                sunspectrum=arts.GriddedField2()
-                if self.sunspectrumtype == "SpectrumMay2004":
-                    sunspectrum.readxml('star/Sun/solar_spectrum_May_2004.xml')
-                else:
-                    sunspectrum.readxml(self.sunspectrumtype)
-
-
-                self.ws.sunsAddSingleFromGrid(
-                    sun_spectrum_raw=sunspectrum,
-                    temperature=0,
-                    distance=sun_pos[0],
-                    latitude=sun_pos[1],
-                    longitude=sun_pos[2],
-                )
-            else:
-                print("No sun source defined!")
-                print("Setting suns off!")
-                self.ws.sunsOff()
-
-        else:
-            self.ws.sunsOff()
 
         # prepare atmosphere
         self.ws.atm_fields_compact = atm
@@ -900,6 +974,15 @@ class FluxSimulator(FluxSimulationConfig):
         if len(geographical_position) == 0:
             self.ws.lat_true = [0]
             self.ws.lon_true = [0]
+
+            if self.ws.suns_do==1:
+                raise ValueError(
+                    "You have defined a sun source but no geographical position!\n"
+                    + "Please define a geographical position!"
+                    + "The position is needed to calculate the solar zenith angle."
+                    + "Thanks!"
+                    )
+
         else:
             self.ws.lat_true = [geographical_position[0]]
             self.ws.lon_true = [geographical_position[1]]
