@@ -270,24 +270,42 @@ class FluxSimulator(FluxSimulationConfig):
 
         # set absorption species
         self.ws.abs_speciesSet(species=self.species)
-
-    def set_sun(self, sun_pos=[]):
+        
+    def delete_sun(self):
         """
-        Set the sun source for the flux simulator.
+        Delete the sun source from the ARTS WS.
 
-        Args:
-            sun_pos (list, optional): The position of the sun source. Defaults to an empty list.
-
-        Returns:
-            None
+        Returns
+        -------
+        None.
         """
+
+        
         try:
             if len(self.ws.suns.value) > 0:
                 self.ws.Delete(self.ws.suns)
                 self.ws.Touch(self.ws.suns)
         except:
             pass
+        
+        
+        
 
+    def set_sun(self, sun_pos=[]):
+        """
+        Set the sun source for the flux simulator.
+        
+        Args:
+            sun_pos (list, optional): The position of the sun source. Defaults to an empty list.
+            If set empty, existing sun will be deleted and sun will be switched off.
+
+        Returns:
+            None
+        """
+        
+        # delete existing sun
+        self.delete_sun()
+        
         try:
             len(self.ws.f_grid.value)
 
@@ -298,22 +316,23 @@ class FluxSimulator(FluxSimulationConfig):
 
 
         # set sun source
-        if self.sunspectrumtype == "Blackbody":
-            if len(sun_pos) > 0:
-                self.ws.sunsAddSingleBlackbody(
-                    distance=sun_pos[0], latitude=sun_pos[1], longitude=sun_pos[2]
-                )
-            else:
-                self.ws.sunsAddSingleBlackbody()
-
-        elif len(self.sunspectrumtype) > 0:
-            sunspectrum=arts.GriddedField2()
-            if self.sunspectrumtype == "SpectrumMay2004":
-                sunspectrum.readxml('star/Sun/solar_spectrum_May_2004.xml')
-            else:
-                sunspectrum.readxml(self.sunspectrumtype)
-
-            if len(sun_pos) > 0:
+        if len(sun_pos) > 0:
+            if self.sunspectrumtype == "Blackbody":
+                if len(sun_pos) > 0:
+                    self.ws.sunsAddSingleBlackbody(
+                        distance=sun_pos[0], latitude=sun_pos[1], longitude=sun_pos[2]
+                    )
+                else:
+                    self.ws.sunsAddSingleBlackbody()
+    
+            elif len(self.sunspectrumtype) > 0:
+                sunspectrum=arts.GriddedField2()
+                if self.sunspectrumtype == "SpectrumMay2004":
+                    sunspectrum.readxml('star/Sun/solar_spectrum_May_2004.xml')
+                else:
+                    sunspectrum.readxml(self.sunspectrumtype)
+    
+            
                 self.ws.sunsAddSingleFromGrid(
                     sun_spectrum_raw=sunspectrum,
                     temperature=0,
@@ -321,11 +340,7 @@ class FluxSimulator(FluxSimulationConfig):
                     latitude=sun_pos[1],
                     longitude=sun_pos[2],
                 )
-            else:
-                self.ws.sunsAddSingleFromGrid(
-                    sun_spectrum_raw=sunspectrum,
-                    temperature=0
-                )
+            
         else:
             print("No sun source defined!")
             print("Setting suns off!")
@@ -338,7 +353,12 @@ class FluxSimulator(FluxSimulationConfig):
             Returns:
                 float: The value of the first sun.
             """
-            return self.ws.suns.value[0]
+            try:
+                suns = self.ws.suns.value
+            except:
+                print("No sun source defined!")
+                suns = None
+            return suns
 
     def scale_sun_to_specific_TSI_at_TOA(self, TSI, latitude, longitude, TOA_altitude):
 
@@ -585,6 +605,7 @@ class FluxSimulator(FluxSimulationConfig):
         fmax=np.inf,
         recalc=False,
         nls_pert=[],
+        **kwargs
     ):
         """
         This function calculates the LUT using the wide setup.
