@@ -15,6 +15,7 @@ unit of frequency is Hz.
 # %%
 import os
 import numpy as np
+from copy import deepcopy
 from pyarts import cat, xml, arts, version
 from pyarts.workspace import Workspace
 from . import _flux_simulator_agendas as fsa
@@ -27,7 +28,7 @@ class FluxSimulationConfig:
     This class defines the basic setup for the flux simulator.
     """
 
-    def __init__(self, setup_name, catalog_version = None):
+    def __init__(self, setup_name, catalog_version=None):
         """
         Parameters
         ----------
@@ -39,15 +40,17 @@ class FluxSimulationConfig:
         None.
         """
 
-        #check version
-        version_min=[2,6,2]
-        v_list=version.split('.')
-        major=int(v_list[0])==version_min[0]
-        minor=int(v_list[1])==version_min[1]
-        patch=int(v_list[2])>=version_min[2]
+        # check version
+        version_min = [2, 6, 2]
+        v_list = version.split(".")
+        major = int(v_list[0]) == version_min[0]
+        minor = int(v_list[1]) == version_min[1]
+        patch = int(v_list[2]) >= version_min[2]
 
         if not major or not minor or not patch:
-            raise ValueError(f"Please use pyarts version >= {'.'.join(str(i) for i in version_min)}.")
+            raise ValueError(
+                f"Please use pyarts version >= {'.'.join(str(i) for i in version_min)}."
+            )
 
         self.setup_name = setup_name
 
@@ -95,10 +98,7 @@ class FluxSimulationConfig:
         self.lut_path = os.path.join(os.getcwd(), "cache", setup_name)
         self.lutname_fullpath = os.path.join(self.lut_path, "LUT.xml")
 
-
-        cat.download.retrieve(
-            version=self.catalog_version, verbose=True
-        )
+        cat.download.retrieve(version=self.catalog_version, verbose=True)
 
     def generateLutDirectory(self, alt_path=None):
         """
@@ -201,7 +201,7 @@ class FluxSimulationConfig:
 
 class FluxSimulator(FluxSimulationConfig):
 
-    def __init__(self, setup_name, catalog_version = None):
+    def __init__(self, setup_name, catalog_version=None):
         """
         This class defines the ARTS setup.
 
@@ -214,7 +214,7 @@ class FluxSimulator(FluxSimulationConfig):
         None.
         """
 
-        super().__init__(setup_name, catalog_version = catalog_version)
+        super().__init__(setup_name, catalog_version=catalog_version)
 
         # start ARTS workspace
         self.ws = Workspace()
@@ -270,6 +270,134 @@ class FluxSimulator(FluxSimulationConfig):
         # set absorption species
         self.ws.abs_speciesSet(species=self.species)
 
+    def delete_sun(self):
+        """
+        Delete the sun source from the ARTS WS.
+
+        Returns
+        -------
+        None.
+        """
+
+        try:
+            if len(self.ws.suns.value) > 0:
+                self.ws.Delete(self.ws.suns)
+                self.ws.Touch(self.ws.suns)
+                self.ws.suns_do = 0
+        except:
+            pass
+
+    def set_sun(self, sun_pos=[1.495978707e11, 0.0, 0.0]):
+        """
+        Sets the sun source for the flux simulator.
+        Parameters:
+            sun_pos (list, optional): The position of the sun source. Defaults to [1.495978707e11, 0.0, 0.0].
+        Returns:
+            None
+        Raises:
+            RuntimeError: If no f_grid is defined.
+        Notes:
+            - This method deletes any existing sun source before setting the new one.
+            - If no sun source is defined, the method sets the suns off.
+            - The sun source can be set as a single blackbody or from a gridded field.
+            - The sun spectrum can be specified using the sunspectrumtype parameter.
+        """
+
+        # delete existing sun
+        self.delete_sun()
+
+        try:
+            len(self.ws.f_grid.value)
+
+        except RuntimeError:
+            print("No f_grid defined!")
+            print("Please define a f_grid first!")
+            return
+
+        # set sun source
+        if len(sun_pos) > 0:
+            if self.sunspectrumtype == "Blackbody":
+                if len(sun_pos) > 0:
+                    self.ws.sunsAddSingleBlackbody(
+                        distance=sun_pos[0], latitude=sun_pos[1], longitude=sun_pos[2]
+                    )
+                else:
+                    self.ws.sunsAddSingleBlackbody()
+
+            elif len(self.sunspectrumtype) > 0:
+                sunspectrum = arts.GriddedField2()
+                if self.sunspectrumtype == "SpectrumMay2004":
+                    sunspectrum.readxml("star/Sun/solar_spectrum_May_2004.xml")
+                else:
+                    sunspectrum.readxml(self.sunspectrumtype)
+
+                self.ws.sunsAddSingleFromGrid(
+                    sun_spectrum_raw=sunspectrum,
+                    temperature=0,
+                    distance=sun_pos[0],
+                    latitude=sun_pos[1],
+                    longitude=sun_pos[2],
+                )
+
+        else:
+            print("No sun source defined!")
+            print("Setting suns off!")
+            self.ws.sunsOff()
+
+    def get_sun(self):
+        """
+        Returns the sun from the ARTS WS.
+
+        Returns:
+            float: The value of the first sun.
+        """
+        try:
+            suns = self.ws.suns.value
+        except:
+            print("No sun variable initialized!")
+            suns = None
+        return suns
+
+    def scale_sun_to_specific_TSI_at_TOA(self, TSI, latitude, longitude, TOA_altitude):
+
+        try:
+            len(self.ws.suns.value)
+        except:
+            print("No sun source defined!")
+            print("Please define a sun source first!")
+            return
+
+        r_toa = self.ws.refellipsoid.value[0] + TOA_altitude
+
+        x_toa = r_toa * np.cos(np.deg2rad(latitude)) * np.cos(np.deg2rad(longitude))
+        y_toa = r_toa * np.cos(np.deg2rad(latitude)) * np.sin(np.deg2rad(longitude))
+        z_toa = r_toa * np.sin(np.deg2rad(latitude))
+
+        r_sun = self.ws.suns.value[0].distance
+        latitude_sun = self.ws.suns.value[0].latitude
+        lomgitude_sun = self.ws.suns.value[0].longitude
+
+        x_sun = (
+            r_sun * np.cos(np.deg2rad(latitude_sun)) * np.cos(np.deg2rad(lomgitude_sun))
+        )
+        y_sun = (
+            r_sun * np.cos(np.deg2rad(latitude_sun)) * np.sin(np.deg2rad(lomgitude_sun))
+        )
+        z_sun = r_sun * np.sin(np.deg2rad(latitude_sun))
+
+        distance = np.sqrt(
+            (x_sun - x_toa) ** 2 + (y_sun - y_toa) ** 2 + (z_sun - z_toa) ** 2
+        )
+
+        TSI_sun = np.trapz(self.ws.suns.value[0].spectrum[:, 0], self.ws.f_grid.value)
+
+        Radius_sun = self.ws.suns.value[0].radius
+        sin_alpha2 = Radius_sun**2 / (distance**2 + Radius_sun**2)
+
+        scale_factor = TSI / TSI_sun / sin_alpha2
+
+        self.ws.suns.value[0].spectrum *= scale_factor
+
     def set_species(self, species):
         """
         This function sets the gas absorption species.
@@ -298,6 +426,34 @@ class FluxSimulator(FluxSimulationConfig):
         """
 
         return self.ws.abs_species
+
+    def add_species(self, list_of_species, verbose=False):
+        """
+        Add new species to the existing species list.
+
+        Parameters:
+        - list_of_species (list): A list of species to be added.
+        - verbose (bool, optional): If True, print the species that are appended. Default is False.
+
+        Returns:
+        None
+        """
+
+        # get species list from class NOT from WS
+        existing_species = self.species
+
+        new_species = deepcopy(existing_species)
+
+        for spc in list_of_species:
+            temp = [j for j, x in enumerate(existing_species) if str(spc) in x]
+
+            if len(temp) == 0:
+                new_species.append(str(spc))
+
+                if verbose:
+                    print(f"appended: {str(spc)}")
+
+        self.set_species(new_species)
 
     def check_species(self):
         """
@@ -346,7 +502,7 @@ class FluxSimulator(FluxSimulationConfig):
                     self.ws.atm_fields_compactAddConstant(
                         self.ws.atm_fields_compact,
                         f"abs_species-{abs_species_i}",
-                        0.,
+                        0.0,
                     )
 
                     print(
@@ -452,6 +608,7 @@ class FluxSimulator(FluxSimulationConfig):
         fmax=np.inf,
         recalc=False,
         nls_pert=[],
+        **kwargs,
     ):
         """
         This function calculates the LUT using the wide setup.
@@ -514,9 +671,9 @@ class FluxSimulator(FluxSimulationConfig):
             print("...setting up lut\n")
             self.ws.abs_lookupSetupWide(t_min=t_min, t_max=t_max, p_step=p_step)
 
-            #add different nls_pert
-            if len(nls_pert)>0:
-                self.ws.abs_nls_pert=nls_pert
+            # add different nls_pert
+            if len(nls_pert) > 0:
+                self.ws.abs_nls_pert = nls_pert
 
             # Setup propagation matrix agenda (absorption)
             self.ws.propmat_clearsky_agendaAuto(
@@ -654,6 +811,97 @@ class FluxSimulator(FluxSimulationConfig):
 
             print("LUT calculation finished!")
 
+    def get_lookuptableBatch(
+        self,
+        batch_atmospheres,
+        p_step=0.05,
+        lines_speedup_option="None",
+        F_grid_from_LUT=False,
+        cutoff=True,
+        fmin=0,
+        fmax=np.inf,
+        recalc=False,
+    ):
+        """
+        This function calculates the LUT using the batch setup.
+        It inputs a batch of atmospheres and calculates the Lut for this batch.
+
+
+        Parameters
+        ----------
+        batch_atmospheres : ArrayOfGriddedField4
+            Batch of atmospheres.
+        p_step : float
+            Pressure step.
+        lines_speedup_option : str
+            Lines speedup option.
+        F_grid_from_LUT : bool
+            If True, the frequency grid is taken from the LUT.
+        cutoff : bool
+            If True, cutoff is used.
+        fmin : float
+            Minimum frequency.
+        fmax : float
+            Maximum frequency.
+        recalc : bool
+            If True, the LUT is recalculated.
+
+        Returns
+        -------
+        None.
+
+        """
+
+        # use saved LUT. recalc only when necessary
+        if recalc == False:
+            try:
+                self.readLUT(F_grid_from_LUT=F_grid_from_LUT, fmin=fmin, fmax=fmax)
+                print("...using stored LUT\n")
+
+            # recalc LUT
+            except RuntimeError:
+                recalc = True
+
+        if recalc == True:
+            print("LUT not found or does not fit.\n So, recalc...\n")
+
+            # generate LUT path
+            self.generateLutDirectory()
+
+            # read spectroscopic data
+            print("...reading data\n")
+            self.ws.ReadXsecData(basename="xsec/")
+            self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(basename="lines/")
+
+            # set atmosphere
+            self.ws.batch_atm_fields_compact = batch_atmospheres
+
+            if cutoff == True:
+                self.ws.abs_lines_per_speciesCutoff(option="ByLine", value=750e9)
+
+            # setup LUT
+            print("...setting up lut\n")
+            self.ws.abs_lookupSetupBatch(p_step=p_step)
+
+            # Setup propagation matrix agenda (absorption)
+            self.ws.propmat_clearsky_agendaAuto(
+                lines_speedup_option=lines_speedup_option
+            )
+
+            if cutoff == True:
+                self.ws.lbl_checked = 1
+            else:
+                self.ws.lbl_checkedCalc()
+
+            # calculate LUT
+            print("...calculating lut\n")
+            self.ws.abs_lookupCalc()
+
+            # save Lut
+            self.ws.WriteXML("binary", self.ws.abs_lookup, self.lutname_fullpath)
+
+            print("LUT calculation finished!")
+
     def flux_simulator_single_profile(
         self,
         atm,
@@ -661,7 +909,6 @@ class FluxSimulator(FluxSimulationConfig):
         z_surface,
         surface_reflectivity,
         geographical_position=np.array([]),
-        sun_pos=np.array([]),
         **kwargs,
     ):
         """
@@ -681,9 +928,8 @@ class FluxSimulator(FluxSimulationConfig):
         surface_reflectivity : float or 1Darray
             Surface reflectivity.
         geographical_position : 1Darray, default is np.array([])
-            Geographical position.
-        sun_pos : 1Darray, default is np.array([])
-            Sun position.
+            Geographical position of the simulated atmosphere.
+            Needs to be set for solar simulations.
 
         Returns
         -------
@@ -722,35 +968,6 @@ class FluxSimulator(FluxSimulationConfig):
         # define environment
         # =============================================================================
 
-        if len(sun_pos) > 0:
-            # set sun source
-            if self.sunspectrumtype == "Blackbody":
-                self.ws.sunsAddSingleBlackbody(
-                    distance=sun_pos[0], latitude=sun_pos[1], longitude=sun_pos[2]
-                )
-            elif len(self.sunspectrumtype) > 0:
-                sunspectrum=arts.GriddedField2()
-                if self.sunspectrumtype == "SpectrumMay2004":
-                    sunspectrum.readxml('star/Sun/solar_spectrum_May_2004.xml')
-                else:
-                    sunspectrum.readxml(self.sunspectrumtype)
-
-
-                self.ws.sunsAddSingleFromGrid(
-                    sun_spectrum_raw=sunspectrum,
-                    temperature=0,
-                    distance=sun_pos[0],
-                    latitude=sun_pos[1],
-                    longitude=sun_pos[2],
-                )
-            else:
-                print("No sun source defined!")
-                print("Setting suns off!")
-                self.ws.sunsOff()
-
-        else:
-            self.ws.sunsOff()
-
         # prepare atmosphere
         self.ws.atm_fields_compact = atm
         self.check_species()
@@ -780,6 +997,15 @@ class FluxSimulator(FluxSimulationConfig):
         if len(geographical_position) == 0:
             self.ws.lat_true = [0]
             self.ws.lon_true = [0]
+
+            if self.ws.suns_do == 1:
+                raise ValueError(
+                    "You have defined a sun source but no geographical position!\n"
+                    + "Please define a geographical position!"
+                    + "The position is needed to calculate the solar zenith angle."
+                    + "Thanks!"
+                )
+
         else:
             self.ws.lat_true = [geographical_position[0]]
             self.ws.lon_true = [geographical_position[1]]
@@ -799,7 +1025,7 @@ class FluxSimulator(FluxSimulationConfig):
         if self.gas_scattering == False:
             self.ws.gas_scatteringOff()
         else:
-            self.ws.gas_scattering_do=1
+            self.ws.gas_scattering_do = 1
 
         if self.allsky:
             self.ws.scat_dataCalc(interp_order=1)
@@ -839,7 +1065,7 @@ class FluxSimulator(FluxSimulationConfig):
         self.ws.StringSet(self.ws.Text, "Start disort")
         self.ws.Print(self.ws.Text, 0)
 
-        aux_var_allsky=[]
+        aux_var_allsky = []
         if self.allsky:
             # allsky flux
             # ====================================================================================
@@ -856,7 +1082,7 @@ class FluxSimulator(FluxSimulationConfig):
             # get auxilary varibles
             if len(self.ws.disort_aux_vars.value):
                 for i in range(len(self.ws.disort_aux_vars.value)):
-                    aux_var_allsky.append(self.ws.disort_aux.value[i][:]*1.)
+                    aux_var_allsky.append(self.ws.disort_aux.value[i][:] * 1.0)
 
             spec_flux = self.ws.spectral_irradiance_field.value[:, :, 0, 0, :] * 1.0
 
@@ -883,10 +1109,10 @@ class FluxSimulator(FluxSimulationConfig):
         )
 
         # get auxilary varibles
-        aux_var_clearsky=[]
+        aux_var_clearsky = []
         if len(self.ws.disort_aux_vars.value):
             for i in range(len(self.ws.disort_aux_vars.value)):
-                aux_var_clearsky.append(self.ws.disort_aux.value[i][:]*1.)
+                aux_var_clearsky.append(self.ws.disort_aux.value[i][:] * 1.0)
 
         spec_flux_cs = self.ws.spectral_irradiance_field.value[:, :, 0, 0, :] * 1.0
 
@@ -987,25 +1213,12 @@ class FluxSimulator(FluxSimulationConfig):
         # define environment
         # =============================================================================
 
-        # if len(self.sunspectrumtype) == 0:
-        #     raise ValueError("sunspectrumpath not set!")
-        # else:
-        #     self.ws.GriddedField2Create("sunspectrum")
-        #     self.ws.sunspectrum = xml.load(self.sunspectrumtype)
-        # set sun source
-        # set sun source
-        if self.sunspectrumtype == "Blackbody":
-            raise ValueError("Blackbody sun not supported for batch !")
-        elif len(self.sunspectrumtype) > 0:
-            sunspectrum=arts.GriddedField2()
-            if self.sunspectrumtype == "SpectrumMay2004":
-                sunspectrum.readxml('star/Sun/solar_spectrum_May_2004.xml')
-            else:
-                sunspectrum.readxml(self.sunspectrumtype)
-            self.ws.GriddedField2Create("sunspectrum")
-            self.ws.sunspectrum = sunspectrum
-        else:
-            raise ValueError("sunspectrumpath not set!")
+        # set sun
+        self.set_sun()
+        self.ws.IndexCreate("sun_index")
+        self.ws.sun_index = 0
+        if len(self.get_sun()) == 0:
+            self.ws.sun_index = -999
 
         # prepare atmosphere
         self.ws.batch_atm_fields_compact = atmospheres
@@ -1059,7 +1272,7 @@ class FluxSimulator(FluxSimulationConfig):
         if self.gas_scattering == False:
             self.ws.gas_scatteringOff()
         else:
-            self.ws.gas_scattering_do=1
+            self.ws.gas_scattering_do = 1
 
         self.ws.NumericCreate("DummyVariable")
         self.ws.IndexCreate("DummyIndex")
@@ -1141,8 +1354,11 @@ class FluxSimulator(FluxSimulationConfig):
 
 # %% addional functions
 
-def generate_gridded_field_from_profiles(pressure_profile,temperature_profile,z_field=None,gases={},particulates={}):
-    '''
+
+def generate_gridded_field_from_profiles(
+    pressure_profile, temperature_profile, z_field=None, gases={}, particulates={}
+):
+    """
     Generate a gridded field from profiles of pressure, temperature, altitude, gases and particulates.
 
     Parameters:
@@ -1167,41 +1383,40 @@ def generate_gridded_field_from_profiles(pressure_profile,temperature_profile,z_
     atm_field : GriddedField4
         Gridded field with the profiles of pressure, temperature, altitude, gases and particulates.
 
-        '''
+    """
 
-    atm_field=arts.GriddedField4()
+    atm_field = arts.GriddedField4()
 
-    #Do some checks
+    # Do some checks
     if len(pressure_profile) != len(temperature_profile):
-        raise ValueError('Pressure and temperature profile must have the same length')
+        raise ValueError("Pressure and temperature profile must have the same length")
 
     if z_field is not None and len(pressure_profile) != len(z_field):
-        raise ValueError('Pressure and altitude profile must have the same length')
+        raise ValueError("Pressure and altitude profile must have the same length")
 
-    #Generate altitude field if not provided
+    # Generate altitude field if not provided
     if z_field is None:
         z_field = 16e3 * (5 - np.log10(pressure_profile))
 
-    #set up grids
-    abs_species = [f'abs_species-{key}' for key in list(gases.keys())]
-    scat_species = [f'scat_species-{key}' for key in list(particulates.keys())]
-    atm_field.set_grid(0, ['T','z'] + abs_species + scat_species)
+    # set up grids
+    abs_species = [f"abs_species-{key}" for key in list(gases.keys())]
+    scat_species = [f"scat_species-{key}" for key in list(particulates.keys())]
+    atm_field.set_grid(0, ["T", "z"] + abs_species + scat_species)
     atm_field.set_grid(1, pressure_profile)
 
-    #set up data
-    atm_field.data = np.zeros((len(atm_field.grids[0]),len(atm_field.grids[1]),1,1))
+    # set up data
+    atm_field.data = np.zeros((len(atm_field.grids[0]), len(atm_field.grids[1]), 1, 1))
 
-    #The first two values are temperature and altitude
-    atm_field.data[0,:,0,0] = temperature_profile
-    atm_field.data[1,:,0,0] = z_field
+    # The first two values are temperature and altitude
+    atm_field.data[0, :, 0, 0] = temperature_profile
+    atm_field.data[1, :, 0, 0] = z_field
 
-    #The next values are the gas species
-    for i,key in enumerate(list(gases.keys())):
-        atm_field.data[i+2,:,0,0] = gases[key]
+    # The next values are the gas species
+    for i, key in enumerate(list(gases.keys())):
+        atm_field.data[i + 2, :, 0, 0] = gases[key]
 
-
-    #The next values are the particulates
-    for i,key in enumerate(list(particulates.keys())):
-        atm_field.data[i+2+len(gases.keys()),:,0,0] = particulates[key]
+    # The next values are the particulates
+    for i, key in enumerate(list(particulates.keys())):
+        atm_field.data[i + 2 + len(gases.keys()), :, 0, 0] = particulates[key]
 
     return atm_field

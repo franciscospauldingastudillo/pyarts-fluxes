@@ -56,12 +56,12 @@ LWC_profile[10:14] = 1e-4
 
 
 # %% generate gridded field from profiles
-# This function generates a ARTS GriddedField4 from the given profiles 
+# This function generates a ARTS GriddedField4 from the given profiles
 # which is needed for the flux simulator. The function takes the profiles
 # for pressure, temperature, H2O, CO2 and LWC as input and returns a ARTS
 # GriddedField4 object. The z_field can be set to None, in this case the
-# z_field is generated from the pressure profile internally. But it is not 
-# recommended if you need accurate height information. 
+# z_field is generated from the pressure profile internally. But it is not
+# recommended if you need accurate height information.
 
 
 atm_field = generate_gridded_field_from_profiles(
@@ -69,7 +69,7 @@ atm_field = generate_gridded_field_from_profiles(
     temperature_profile,
     gases={"H2O": H2O_profile, "CO2": CO2},
     particulates={"LWC-mass_density": LWC_profile},
-    z_field=None
+    z_field=None,
 )
 
 # %% save the generated atmosphere to a file
