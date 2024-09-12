@@ -455,8 +455,12 @@ def dobatch_calc_agenda_allsky(ws):
     ws.Extract(ws.sun_lat, ws.sun_pos, 1)
     ws.Extract(ws.sun_lon, ws.sun_pos, 2)
 
-    ws.sunsChangeGeometry(index=ws.sun_index, distance=ws.sun_dist, latitude=ws.sun_lat, longitude=ws.sun_lon)
-
+    ws.sunsChangeGeometry(
+        index=ws.sun_index,
+        distance=ws.sun_dist,
+        latitude=ws.sun_lat,
+        longitude=ws.sun_lon,
+    )
 
     # setoutput for console
     ws.StringSet(ws.Text, "Allsky: DObatch Index")
@@ -536,7 +540,12 @@ def dobatch_calc_agenda_clearsky(ws):
     ws.Extract(ws.sun_lat, ws.sun_pos, 1)
     ws.Extract(ws.sun_lon, ws.sun_pos, 2)
 
-    ws.sunsChangeGeometry(index=ws.sun_index, distance=ws.sun_dist, latitude=ws.sun_lat, longitude=ws.sun_lon)
+    ws.sunsChangeGeometry(
+        index=ws.sun_index,
+        distance=ws.sun_dist,
+        latitude=ws.sun_lat,
+        longitude=ws.sun_lon,
+    )
 
     ws.StringSet(ws.Text, "Clearsky: DObatch Index")
     ws.Print(ws.Text, 0)

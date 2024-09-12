@@ -30,7 +30,7 @@ f_grid_sw = arts.convert.wavelen2freq(wvl[::-1])
 
 # some data preparations
 surface_altitudes = [aux_i[1] for aux_i in auxs]
-surface_tempratures = [aux_i[0] for aux_i in auxs]
+surface_temperatures = [aux_i[0] for aux_i in auxs]
 geographical_positions = [[aux_i[4], aux_i[5]] for aux_i in auxs]
 sun_positions = [[1.495978707e11, 0.0, -120.0] for aux_i in auxs]
 refls = [[0.3] for i in range(len(auxs))]
@@ -81,7 +81,7 @@ FluxSimulator_batch.define_particulate_scatterer(
 
 results = FluxSimulator_batch.flux_simulator_batch(
     atms,
-    surface_tempratures,
+    surface_temperatures,
     surface_altitudes,
     refls,
     geographical_positions,
