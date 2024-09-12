@@ -56,6 +56,28 @@ FluxSimulator_batch.set_species(
     ]
 )
 
+FluxSimulator_batch.define_particulate_scatterer(
+    "LWC", "pnd_agenda_CGLWC", "MieSpheres_H2O_liquid", ["mass_density"]
+)
+FluxSimulator_batch.define_particulate_scatterer(
+    "RWC", "pnd_agenda_CGRWC", "MieSpheres_H2O_liquid", ["mass_density"]
+)
+FluxSimulator_batch.define_particulate_scatterer(
+    "IWC",
+    "pnd_agenda_CGIWC",
+    "HexagonalColumn-ModeratelyRough.modified",
+    ["mass_density"],
+)
+FluxSimulator_batch.define_particulate_scatterer(
+    "SWC",
+    "pnd_agenda_CGSWC_tropic",
+    "10-PlateAggregate-ModeratelyRough.modified",
+    ["mass_density"],
+)
+FluxSimulator_batch.define_particulate_scatterer(
+    "GWC", "pnd_agenda_CGGWC", "Droxtal-SeverelyRough.modified", ["mass_density"]
+)
+
 
 results = FluxSimulator_batch.flux_simulator_batch(
     atms,

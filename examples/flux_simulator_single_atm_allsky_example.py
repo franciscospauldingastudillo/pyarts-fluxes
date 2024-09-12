@@ -130,8 +130,7 @@ results_lw = LW_flux_simulator.flux_simulator_single_profile(
     surface_temperature,
     surface_altitude,
     surface_reflectivity_sw,
-    geographical_position=[lat, lon],
-    sun_pos=[],
+    geographical_position=[lat, lon]
 )
 
 
@@ -143,6 +142,7 @@ SW_flux_simulator = fsm.FluxSimulator(setup_name + "_SW")
 SW_flux_simulator.ws.f_grid = f_grid_sw
 SW_flux_simulator.emission = 0
 SW_flux_simulator.gas_scattering = True
+SW_flux_simulator.set_sun(sun_pos)
 
 
 #Setup scatterers for the shortwave simulation
@@ -184,6 +184,5 @@ results_sw = SW_flux_simulator.flux_simulator_single_profile(
     surface_temperature,
     surface_altitude,
     surface_reflectivity_sw,
-    geographical_position=[lat, lon],
-    sun_pos=sun_pos,
+    geographical_position=[lat, lon]
 )

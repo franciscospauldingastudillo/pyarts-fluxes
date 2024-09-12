@@ -285,23 +285,29 @@ class FluxSimulator(FluxSimulationConfig):
             if len(self.ws.suns.value) > 0:
                 self.ws.Delete(self.ws.suns)
                 self.ws.Touch(self.ws.suns)
+                self.ws.suns_do=0
         except:
             pass
         
         
         
 
-    def set_sun(self, sun_pos=[]):
+    def set_sun(self, sun_pos=[1.495978707e11, 0.0, 0.0]):
         """
-        Set the sun source for the flux simulator.
-        
-        Args:
-            sun_pos (list, optional): The position of the sun source. Defaults to an empty list.
-            If set empty, existing sun will be deleted and sun will be switched off.
-
+        Sets the sun source for the flux simulator.
+        Parameters:
+            sun_pos (list, optional): The position of the sun source. Defaults to [1.495978707e11, 0.0, 0.0].
         Returns:
             None
+        Raises:
+            RuntimeError: If no f_grid is defined.
+        Notes:
+            - This method deletes any existing sun source before setting the new one.
+            - If no sun source is defined, the method sets the suns off.
+            - The sun source can be set as a single blackbody or from a gridded field.
+            - The sun spectrum can be specified using the sunspectrumtype parameter.
         """
+
         
         # delete existing sun
         self.delete_sun()
@@ -356,7 +362,7 @@ class FluxSimulator(FluxSimulationConfig):
             try:
                 suns = self.ws.suns.value
             except:
-                print("No sun source defined!")
+                print("No sun variable initialized!")
                 suns = None
             return suns
 
@@ -1211,25 +1217,14 @@ class FluxSimulator(FluxSimulationConfig):
         # define environment
         # =============================================================================
 
-        # if len(self.sunspectrumtype) == 0:
-        #     raise ValueError("sunspectrumpath not set!")
-        # else:
-        #     self.ws.GriddedField2Create("sunspectrum")
-        #     self.ws.sunspectrum = xml.load(self.sunspectrumtype)
-        # set sun source
-        # set sun source
-        if self.sunspectrumtype == "Blackbody":
-            raise ValueError("Blackbody sun not supported for batch !")
-        elif len(self.sunspectrumtype) > 0:
-            sunspectrum=arts.GriddedField2()
-            if self.sunspectrumtype == "SpectrumMay2004":
-                sunspectrum.readxml('star/Sun/solar_spectrum_May_2004.xml')
-            else:
-                sunspectrum.readxml(self.sunspectrumtype)
-            self.ws.GriddedField2Create("sunspectrum")
-            self.ws.sunspectrum = sunspectrum
-        else:
-            raise ValueError("sunspectrumpath not set!")
+        # set sun
+        self.set_sun()
+        self.ws.IndexCreate("sun_index")
+        self.ws.sun_index=0
+        if len(self.get_sun())==0:
+            self.ws.sun_index=-999
+        
+        
 
         # prepare atmosphere
         self.ws.batch_atm_fields_compact = atmospheres

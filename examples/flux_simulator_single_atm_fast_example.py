@@ -91,8 +91,7 @@ results_lw = LW_flux_simulator.flux_simulator_single_profile(
     surface_temperature,
     surface_altitude,
     surface_reflectivity_sw,
-    geographical_position=[lat, lon],
-    sun_pos=[],
+    geographical_position=[lat, lon]
 )
 
 
@@ -105,12 +104,12 @@ SW_flux_simulator.ws.f_grid.readxml('planets/Earth/Optimized-Flux-Frequencies/SW
 SW_flux_simulator.quadrature_weights.readxml('planets/Earth/Optimized-Flux-Frequencies/SW-flux-optimized-quadrature_weights.xml')
 SW_flux_simulator.emission = 0
 SW_flux_simulator.gas_scattering = True
+SW_flux_simulator.set_sun(sun_pos)
 
 results_sw = SW_flux_simulator.flux_simulator_single_profile(
     atm,
     surface_temperature,
     surface_altitude,
     surface_reflectivity_sw,
-    geographical_position=[lat, lon],
-    sun_pos=sun_pos,
+    geographical_position=[lat, lon]
 )
