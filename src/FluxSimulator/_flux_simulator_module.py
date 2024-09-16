@@ -1011,7 +1011,10 @@ class FluxSimulator(FluxSimulationConfig):
             self.ws.lon_true = [geographical_position[1]]
 
         # surface reflectivities
-        self.ws.surface_scalar_reflectivity = [surface_reflectivity]
+        try:            
+            self.ws.surface_scalar_reflectivity = surface_reflectivity
+        except:            
+            self.ws.surface_scalar_reflectivity = [surface_reflectivity]   
 
         print("starting calculation...\n")
 
