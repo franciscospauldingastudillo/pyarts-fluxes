@@ -333,8 +333,7 @@ def pnd_agenda_CGLWC(ws):
         ws.pnd_size_grid, ws.scat_meta, "diameter_max", ws.agenda_array_index
     )
     ws.Copy(ws.psd_size_grid, ws.pnd_size_grid)
-    ws.NumericSet(ws.scat_species_a, 523.5987755982989)
-    ws.NumericSet(ws.scat_species_b, 3.0)
+    ws.ScatSpeciesSizeMassInfo(x_unit="dmax", species_index=ws.agenda_array_index)    
     ws.psdModifiedGammaMass(n0=-999, mu=2, la=2.13e5, ga=1, t_min=0, t_max=400)
     ws.pndFromPsdBasic()
 
@@ -346,8 +345,7 @@ def pnd_agenda_CGIWC(ws):
         ws.pnd_size_grid, ws.scat_meta, "diameter_max", ws.agenda_array_index
     )
     ws.Copy(ws.psd_size_grid, ws.pnd_size_grid)
-    ws.NumericSet(ws.scat_species_a, 0.164102)
-    ws.NumericSet(ws.scat_species_b, 2.27447)
+    ws.ScatSpeciesSizeMassInfo(x_unit="dmax", species_index=ws.agenda_array_index)
     ws.psdModifiedGammaMass(n0=-999, mu=2, la=2.05e5, ga=1, t_min=0, t_max=400)
     ws.pndFromPsdBasic()
 
@@ -359,8 +357,7 @@ def pnd_agenda_CGRWC(ws):
         ws.pnd_size_grid, ws.scat_meta, "diameter_max", ws.agenda_array_index
     )
     ws.Copy(ws.psd_size_grid, ws.pnd_size_grid)
-    ws.NumericSet(ws.scat_species_a, 523.5987755982989)
-    ws.NumericSet(ws.scat_species_b, 3.0)
+    ws.ScatSpeciesSizeMassInfo(x_unit="dmax", species_index=ws.agenda_array_index)
     ws.psdAbelBoutle12(t_min=0, t_max=400)
     ws.pndFromPsdBasic()
 
@@ -372,8 +369,7 @@ def pnd_agenda_CGSWC_tropic(ws):
         ws.pnd_size_grid, ws.scat_meta, "diameter_max", ws.agenda_array_index
     )
     ws.Copy(ws.psd_size_grid, ws.pnd_size_grid)
-    ws.NumericSet(ws.scat_species_a, 20.8146)
-    ws.NumericSet(ws.scat_species_b, 3.0)
+    ws.ScatSpeciesSizeMassInfo(x_unit="dmax", species_index=ws.agenda_array_index)
     ws.psdFieldEtAl07(regime="TR", t_min=0, t_max=400)
     ws.pndFromPsdBasic()
 
@@ -385,8 +381,7 @@ def pnd_agenda_CGSWC_midlatitude(ws):
         ws.pnd_size_grid, ws.scat_meta, "diameter_max", ws.agenda_array_index
     )
     ws.Copy(ws.psd_size_grid, ws.pnd_size_grid)
-    ws.NumericSet(ws.scat_species_a, 20.8146)
-    ws.NumericSet(ws.scat_species_b, 3.0)
+    ws.ScatSpeciesSizeMassInfo(x_unit="dmax", species_index=ws.agenda_array_index)
     ws.psdFieldEtAl07(regime="ML", t_min=0, t_max=400)
     ws.pndFromPsdBasic()
 
@@ -398,8 +393,7 @@ def pnd_agenda_CGGWC(ws):
         ws.pnd_size_grid, ws.scat_meta, "diameter_max", ws.agenda_array_index
     )
     ws.Copy(ws.psd_size_grid, ws.pnd_size_grid)
-    ws.NumericSet(ws.scat_species_a, 347.172)
-    ws.NumericSet(ws.scat_species_b, 3.0)
+    ws.ScatSpeciesSizeMassInfo(x_unit="dmax", species_index=ws.agenda_array_index)
     ws.psdModifiedGammaMass(n0=4e6, mu=0, la=-999, ga=1, t_min=0, t_max=400)
     ws.pndFromPsdBasic()
 
