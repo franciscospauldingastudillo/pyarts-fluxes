@@ -786,6 +786,7 @@ class FluxSimulator(FluxSimulationConfig):
 
             if cutoff == True:
                 self.ws.abs_lines_per_speciesCutoff(option="ByLine", value=750e9)
+                self.ws.abs_lines_per_speciesNormalization(option="SFS")
 
             # setup LUT
             print("...setting up lut\n")
