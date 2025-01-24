@@ -600,8 +600,8 @@ class FluxSimulator(FluxSimulationConfig):
         self,
         t_min=150.0,
         t_max=350.0,
-        pmin=0.5,
-        pmax=1.1e5,
+        p_min=0.5,
+        p_max=1.1e5,
         p_step=0.05,
         lines_speedup_option="None",
         F_grid_from_LUT=False,
@@ -621,6 +621,10 @@ class FluxSimulator(FluxSimulationConfig):
             Minimum temperature.
         t_max : float
             Maximum temperature.
+        p_min : float
+            Minimum pressure.
+        p_max : float
+            Maximum pressure.   
         p_step : float
             Pressure step.
         lines_speedup_option : str
@@ -671,7 +675,7 @@ class FluxSimulator(FluxSimulationConfig):
 
             # setup LUT
             print("...setting up lut\n")
-            self.ws.abs_lookupSetupWide(t_min=t_min, t_max=t_max, p_step=p_step, pmin=pmin, pmax=pmax)
+            self.ws.abs_lookupSetupWide(t_min=t_min, t_max=t_max, p_step=p_step, p_min=p_min, p_max=p_max)
 
             # add different nls_pert
             if len(nls_pert) > 0:
