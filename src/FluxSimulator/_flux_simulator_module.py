@@ -1361,6 +1361,94 @@ class FluxSimulator(FluxSimulationConfig):
 
         return results
 
+    def calc_optical_thickness(
+        self,
+        atm,
+        T_surface,
+        z_surface,
+        surface_reflectivity,
+        geographical_position=np.array([]),
+        **kwargs,
+    ):
+
+        # define environment
+        # =============================================================================
+
+        # prepare atmosphere
+        self.ws.atm_fields_compact = atm
+        self.check_species()
+        self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
+
+        # set absorption
+        # =============================================================================
+
+        print("setting up absorption...\n")
+
+        # Calculate or load LUT
+        self.get_lookuptableWide(**kwargs)
+
+        # Use LUT for absorption
+        self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
+
+        # setup
+        # =============================================================================
+
+        # surface altitudes
+        self.ws.z_surface = [[z_surface]]
+
+        # surface temperatures
+        self.ws.surface_skin_t = T_surface
+
+        # set geographical position
+        if len(geographical_position) == 0:
+            self.ws.lat_true = [0]
+            self.ws.lon_true = [0]
+
+            if self.ws.suns_do == 1:
+                raise ValueError(
+                    "You have defined a sun source but no geographical position!\n"
+                    + "Please define a geographical position!"
+                    + "The position is needed to calculate the solar zenith angle."
+                    + "Thanks!"
+                )
+
+        else:
+            self.ws.lat_true = [geographical_position[0]]
+            self.ws.lon_true = [geographical_position[1]]
+
+        # surface reflectivities
+        try:            
+            self.ws.surface_scalar_reflectivity = surface_reflectivity
+        except:            
+            self.ws.surface_scalar_reflectivity = [surface_reflectivity]   
+
+        print("starting calculation...\n")
+
+        # no sensor
+        self.ws.sensorOff()
+
+        self.ws.atmfields_checkedCalc()
+
+        self.ws.propmat_clearsky_fieldCalc()
+
+
+        abs_coeff=self.ws.propmat_clearsky_field.value[:,:,0,0,:,0,0]
+
+        # Calculate optical thickness
+        z_field = atm.data[1, :, 0, 0]
+        dz = np.diff(z_field)
+        dz = np.append(np.array(dz[-1]),dz )
+
+        optical_thickness = np.cumsum(abs_coeff[:,:,::-1]*dz[::-1], axis=2)
+        optical_thickness = optical_thickness[:,:,::-1]
+
+        # results
+        # ====================================================================================
+
+
+        return optical_thickness
+ 
+
 
 # %% addional functions
 
