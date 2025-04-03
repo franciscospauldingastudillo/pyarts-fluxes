@@ -56,7 +56,7 @@ class FluxSimulationConfig:
 
         # set default species
         self.species = [
-            "H2O, H2O-SelfContCKDMT350, H2O-ForeignContCKDMT350",
+            "H2O, H2O-SelfContCKDMT400, H2O-ForeignContCKDMT400",
             "O2-*-1e12-1e99,O2-CIAfunCKDMT100",
             "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
             "CO2, CO2-CKDMT252",
@@ -668,10 +668,17 @@ class FluxSimulator(FluxSimulationConfig):
             # read spectroscopic data
             print("...reading data\n")
             self.ws.ReadXsecData(basename="xsec/")
-            self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(basename="lines/")
+            try:
+                self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(basename="lines/")
+            except RuntimeError:
+                print("no lines in abs_species")
 
             if cutoff == True:
                 self.ws.abs_lines_per_speciesCutoff(option="ByLine", value=750e9)
+               
+            
+            if len([ str(tag) for tag in self.get_species().value if "ContCKDMT400" in str(tag)]):
+                self.ws.ReadXML(self.ws.predefined_model_data,'model/mt_ckd_4.0/H2O.xml')
 
             # setup LUT
             print("...setting up lut\n")
