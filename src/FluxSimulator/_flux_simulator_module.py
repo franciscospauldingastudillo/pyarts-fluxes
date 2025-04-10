@@ -71,6 +71,8 @@ class FluxSimulationConfig:
         self.well_mixed_species_defaults["CH4"] = 1.8e-6
         self.well_mixed_species_defaults["O2"] = 0.21
         self.well_mixed_species_defaults["N2"] = 0.78
+        
+        self.LUT_wide_h2o_vmr_default_parameters=[2,-12,-9]
 
         # set default paths
         self.catalog_version = catalog_version
@@ -98,7 +100,7 @@ class FluxSimulationConfig:
         self.lut_path = os.path.join(os.getcwd(), "cache", setup_name)
         self.lutname_fullpath = os.path.join(self.lut_path, "LUT.xml")
 
-        cat.download.retrieve(version=self.catalog_version, verbose=True)
+        cat.download.retrieve(version=self.catalog_version, verbose=False)
 
     def generateLutDirectory(self, alt_path=None):
         """
@@ -596,7 +598,7 @@ class FluxSimulator(FluxSimulationConfig):
         self.ws.abs_lookupAdapt()
         self.ws.lbl_checked = 1
 
-    def get_lookuptableWide(
+    def get_lookuptableWide(        
         self,
         t_min=150.0,
         t_max=350.0,
@@ -613,40 +615,177 @@ class FluxSimulator(FluxSimulationConfig):
         **kwargs,
     ):
         """
-        This function calculates the LUT using the wide setup.
-
+        Generates or retrieves a lookup table based on abs_lookupSetupWide for absorption calculations.
+        This method either loads a pre-existing lookup table (LUT) from storage or 
+        calculates a new one if the requested one doesn't exist or needs to be recalculated.
         Parameters
         ----------
-        t_min : float
-            Minimum temperature.
-        t_max : float
-            Maximum temperature.
-        p_min : float
-            Minimum pressure.
-        p_max : float
-            Maximum pressure.   
-        p_step : float
-            Pressure step.
-        lines_speedup_option : str
-            Lines speedup option.
-        F_grid_from_LUT : bool
-            If True, the frequency grid is taken from the LUT.
-        cutoff : bool
-            If True, cutoff is used.
-        fmin : float
-            Minimum frequency.
-        fmax : float
-            Maximum frequency.
-        recalc : bool
-            If True, the LUT is recalculated.
-        nls_pert: list of pertuberations
-            Pertuberations used for non-linear species,
-            if empty, falls back to internal default of arts
-
+        t_min : float, optional
+            Minimum temperature in Kelvin for the LUT, default 150.0 K
+        t_max : float, optional
+            Maximum temperature in Kelvin for the LUT, default 350.0 K
+        p_min : float, optional
+            Minimum pressure in Pa for the LUT, default 0.5 Pa
+        p_max : float, optional
+            Maximum pressure in Pa for the LUT, default 1.1e5 Pa
+        p_step : float, optional
+            Pressure step size in logarithmic scale, default 0.05
+        lines_speedup_option : str, optional
+            Option for line-by-line calculation speedup, default "None"
+        F_grid_from_LUT : bool, optional
+            Whether to use the frequency grid from the LUT, default False
+        cutoff : bool, optional
+            Whether to apply a cutoff to absorption lines, default True
+        fmin : float, optional
+            Minimum frequency to consider in the LUT, default 0
+        fmax : float, optional
+            Maximum frequency to consider in the LUT, default infinity
+        recalc : bool, optional
+            Force recalculation of the LUT even if one exists, default False
+        nls_pert : list, optional
+            Non-LTE perturbations to apply, default empty list
+        **kwargs : dict
+            Additional keyword arguments passed to abs_lookupSetupWide
         Returns
         -------
-        None.
+        None
+            The lookup table is stored internally in the workspace
+        Notes
+        -----
+        - When water vapor is present in abs_species, a default profile is applied based on
+          the LUT_wide_h2o_vmr_default_parameters attribute of the class.
+        - If recalc is False, the method attempts to read an existing LUT and only recalculates
+          if it fails to find one or if it doesn't fit the requested parameters.
+        - The generated LUT is stored in the location specified by lutname_fullpath.
+        """
 
+
+        # use saved LUT. recalc only when necessary
+        if recalc == False:
+            try:
+                self.readLUT(F_grid_from_LUT=F_grid_from_LUT, fmin=fmin, fmax=fmax)
+                print("...using stored LUT\n")
+
+            # recalc LUT
+            except RuntimeError:
+                recalc = True
+
+        if recalc == True:
+            print("LUT not found or does not fit.\n So, recalc...\n")
+
+            # generate LUT path
+            self.generateLutDirectory()
+
+            # read spectroscopic data
+            print("...reading data\n")
+            self.ws.ReadXsecData(basename="xsec/")
+            try:
+                self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(basename="lines/")
+            except RuntimeError:
+                print("no lines in abs_species")
+
+            if cutoff == True:
+                self.ws.abs_lines_per_speciesCutoff(option="ByLine", value=750e9)
+
+            if len([ str(tag) for tag in self.get_species().value if "ContCKDMT400" in str(tag)]):
+                self.ws.ReadXML(self.ws.predefined_model_data,'model/mt_ckd_4.0/H2O.xml')
+
+            # setup LUT
+            print("...setting up lut\n")
+            self.ws.abs_lookupSetupWide(t_min=t_min, t_max=t_max, p_step=p_step, p_min=p_min, p_max=p_max, **kwargs)
+
+            # SET abs_vwmrs by hand
+            abs_vmrs = self.ws.abs_vmrs.value
+
+            # check for water vapor
+            H2O_exist = [
+                True if "H2O" in str(x) else False for x in self.ws.abs_species.value
+            ]
+
+            if np.sum(H2O_exist):
+
+                vmr_h20_default_profile = self.ws.abs_p.value[:] ** (
+                    self.LUT_wide_h2o_vmr_default_parameters[0]
+                ) * 10 ** (self.LUT_wide_h2o_vmr_default_parameters[1])
+
+                vmr_h20_default_profile[
+                    vmr_h20_default_profile
+                    < self.LUT_wide_h2o_vmr_default_parameters[2]
+                ] = 2
+
+                for i, logic in enumerate(H2O_exist):
+                    if logic:
+                        abs_vmrs[i, :] = vmr_h20_default_profile
+
+            self.ws.abs_vmrs.value = abs_vmrs
+
+            # add different nls_pert
+            if len(nls_pert) > 0:
+                self.ws.abs_nls_pert = nls_pert
+
+            # Setup propagation matrix agenda (absorption)
+            self.ws.propmat_clearsky_agendaAuto(
+                lines_speedup_option=lines_speedup_option
+            )
+
+            if cutoff == True:
+                self.ws.lbl_checked = 1
+            else:
+                self.ws.lbl_checkedCalc()
+
+            # calculate LUT
+            print("...calculating lut\n")
+            self.ws.abs_lookupCalc()
+
+            # save Lut
+            self.ws.WriteXML("binary", self.ws.abs_lookup, self.lutname_fullpath)
+
+            print("LUT calculation finished!")
+
+    def get_lookuptable(
+        self,
+        atm,
+        p_step=0.05,
+        lines_speedup_option="None",
+        F_grid_from_LUT=False,
+        cutoff=True,
+        fmin=0,
+        fmax=np.inf,
+        recalc=False,
+        **kwargs,
+    ):
+        """
+        Creates or retrieves a look-up table (LUT) based on abs_lookupSetup for absorption calculations.
+        This method either loads an existing LUT or calculates a new one based on the given atmosphere.
+        The LUT is used to speed up absorption calculations in radiative transfer simulations.
+        Parameters
+        ----------
+        atm : object
+            Atmospheric state object containing temperature, pressure, and species concentrations.
+        p_step : float, optional
+            Pressure grid step size for the LUT, default is 0.05.
+        lines_speedup_option : str, optional
+            Option for line absorption calculation speedup, default is "None".
+        F_grid_from_LUT : bool, optional
+            Whether to use frequency grid from the LUT, default is False.
+        cutoff : bool, optional
+            Whether to apply cutoff to absorption lines, default is True.
+        fmin : float, optional
+            Minimum frequency to consider in Hz, default is 0.
+        fmax : float, optional
+            Maximum frequency to consider in Hz, default is infinity.
+        recalc : bool, optional
+            Force recalculation of the LUT even if it exists, default is False.
+        **kwargs : dict
+            Additional keyword arguments passed to abs_lookupSetup.
+        Returns
+        -------
+        None
+            The look-up table is stored internally and can be accessed via self.ws.abs_lookup.
+        Notes
+        -----
+        If cutoff is True, absorption lines beyond 750 GHz are ignored. The method automatically
+        handles the MT_CKD_4.0 continuum model if it's included in the species list.
         """
 
         # use saved LUT. recalc only when necessary
@@ -675,18 +814,17 @@ class FluxSimulator(FluxSimulationConfig):
 
             if cutoff == True:
                 self.ws.abs_lines_per_speciesCutoff(option="ByLine", value=750e9)
-               
-            
+
             if len([ str(tag) for tag in self.get_species().value if "ContCKDMT400" in str(tag)]):
                 self.ws.ReadXML(self.ws.predefined_model_data,'model/mt_ckd_4.0/H2O.xml')
 
+            self.ws.atm_fields_compact = atm
+            self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
+
             # setup LUT
             print("...setting up lut\n")
-            self.ws.abs_lookupSetupWide(t_min=t_min, t_max=t_max, p_step=p_step, p_min=p_min, p_max=p_max)
-
-            # add different nls_pert
-            if len(nls_pert) > 0:
-                self.ws.abs_nls_pert = nls_pert
+            self.ws.atmfields_checked = 1
+            self.ws.abs_lookupSetup(p_step=p_step, **kwargs)
 
             # Setup propagation matrix agenda (absorption)
             self.ws.propmat_clearsky_agendaAuto(
@@ -705,9 +843,9 @@ class FluxSimulator(FluxSimulationConfig):
             # save Lut
             self.ws.WriteXML("binary", self.ws.abs_lookup, self.lutname_fullpath)
 
-            print("LUT calculation finished!")
+            print("LUT calculation finished!")        
 
-    def get_lookuptable(
+    def get_lookuptable_profile(
         self,
         pressure_profile,
         temperature_profile,
@@ -721,40 +859,52 @@ class FluxSimulator(FluxSimulationConfig):
         recalc=False,
     ):
         """
-        This function calculates the LUT using the wide setup.
-        It is important that the size of the first dimension of
-        vmr_profiles matches the defined species list.
-        I cannot check this here, because vmr_profiles is only simple matrix.
-
-
+        Generate or retrieve a lookup table (LUT) for atmospheric absorption profiles.
+        This method creates a lookup table for the radiative transfer calculations
+        based on given atmospheric profiles or loads a previously calculated LUT if available.
         Parameters
         ----------
-        pressure_profile : 1Darray
-            Pressure profile.
-        temperature_profile : 1Darray
-            Temperature profile.
-        vmr_profiles : 2Darray
-            VMR profiles.
-        p_step : float
-            Pressure step.
-        lines_speedup_option : str
-            Lines speedup option.
-        F_grid_from_LUT : bool
-            If True, the frequency grid is taken from the LUT.
-        cutoff : bool
-            If True, cutoff is used.
-        fmin : float
-            Minimum frequency.
-        fmax : float
-            Maximum frequency.
-        recalc : bool
-            If True, the LUT is recalculated.
-
+        pressure_profile : array-like
+            Pressure levels of the atmosphere [Pa].
+        temperature_profile : array-like
+            Temperature profile at each pressure level [K].
+        vmr_profiles : array-like
+            Volume mixing ratios for each species at each pressure level.
+            Shape should be (n_species, n_pressure_levels).
+        p_step : float, optional
+            Pressure grid step size for the lookup table. Default is 0.05.
+        lines_speedup_option : str, optional
+            Speedup option for line calculations. Default is "None".
+        F_grid_from_LUT : bool, optional
+            Whether to use the frequency grid from the LUT. Default is False.
+        cutoff : bool, optional
+            Whether to apply line cutoff at 750 GHz. Default is True.
+        fmin : float, optional
+            Minimum frequency for LUT calculations [Hz]. Default is 0.
+        fmax : float, optional
+            Maximum frequency for LUT calculations [Hz]. Default is infinity.
+        recalc : bool, optional
+            Force recalculation of the LUT even if it exists. Default is False.
         Returns
         -------
-        None.
-
-        """
+        None
+            The LUT is stored in the workspace and saved to disk.
+        Raises
+        ------
+        ValueError
+            If the dimensions of pressure_profile, temperature_profile, and vmr_profiles are inconsistent.
+        RuntimeError
+            If reading the existing LUT fails.
+        Notes
+        -----
+        The method performs the following steps:
+        1. Tries to read an existing LUT if recalc=False
+        2. If reading fails or recalc=True, it sets up and calculates a new LUT
+        3. Validates profiles dimensions
+        4. Sets up the ARTS workspace with the atmospheric data
+        5. Calculates the absorption lookup table
+        6. Saves the LUT to disk
+        """    
 
         # use saved LUT. recalc only when necessary
         if recalc == False:
@@ -897,6 +1047,31 @@ class FluxSimulator(FluxSimulationConfig):
             print("...setting up lut\n")
             self.ws.abs_lookupSetupBatch(p_step=p_step)
 
+            # SET abs_vwmrs by hand
+            abs_vmrs=self.ws.abs_vmrs.value           
+
+            # check for water vapor
+            H2O_exist=[True  if "H2O" in str(x) else False for x in self.ws.abs_species.value]
+            # H2Osum=np.sum(H2O_exist)
+
+            # Here we modify the vmr of H2O if there are more than one H2O species,
+            # because in ARTS only the first one is set correctly (You can call this buggy behavior).
+            # So, we set it to same value as the first H2O species.
+
+            if np.sum(H2O_exist):         
+                flag=False
+                for i, logic in enumerate(H2O_exist):
+
+                    if logic:
+                        if flag==False:
+                            vmrH2O_min=np.min(abs_vmrs[i,:])
+                            flag=True
+
+                        logic2=abs_vmrs[i,:]==0
+                        abs_vmrs[i,logic2]=vmrH2O_min
+
+                self.ws.abs_vmrs.value=abs_vmrs
+
             # Setup propagation matrix agenda (absorption)
             self.ws.propmat_clearsky_agendaAuto(
                 lines_speedup_option=lines_speedup_option
@@ -997,6 +1172,269 @@ class FluxSimulator(FluxSimulationConfig):
 
         # Use LUT for absorption
         self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
+
+        # setup
+        # =============================================================================
+
+        # surface altitudes
+        self.ws.z_surface = [[z_surface]]
+
+        # surface temperatures
+        self.ws.surface_skin_t = T_surface
+
+        # set geographical position
+        if len(geographical_position) == 0:
+            self.ws.lat_true = [0]
+            self.ws.lon_true = [0]
+
+            if self.ws.suns_do == 1:
+                raise ValueError(
+                    "You have defined a sun source but no geographical position!\n"
+                    + "Please define a geographical position!"
+                    + "The position is needed to calculate the solar zenith angle."
+                    + "Thanks!"
+                )
+
+        else:
+            self.ws.lat_true = [geographical_position[0]]
+            self.ws.lon_true = [geographical_position[1]]
+
+        # surface reflectivities
+        try:            
+            self.ws.surface_scalar_reflectivity = surface_reflectivity
+        except:            
+            self.ws.surface_scalar_reflectivity = [surface_reflectivity]   
+
+        print("starting calculation...\n")
+
+        # no sensor
+        self.ws.sensorOff()
+
+        # set cloudbox to full atmosphere
+        self.ws.cloudboxSetFullAtm()
+
+        # set gas scattering on or off
+        if self.gas_scattering == False:
+            self.ws.gas_scatteringOff()
+        else:
+            self.ws.gas_scattering_do = 1
+
+        if self.allsky:
+            self.ws.scat_dataCalc(interp_order=1)
+            self.ws.Delete(self.ws.scat_data_raw)
+            self.ws.scat_dataCheck(check_type="all")
+
+            self.ws.pnd_fieldCalcFromParticleBulkProps()
+            self.ws.scat_data_checkedCalc()
+        else:
+
+            if len(self.ws.scat_species.value) > 0:
+                print(
+                    ("You have define scattering species for a clearsky simulation.\n")
+                    + (
+                        "Since they are not used we have to erase the scattering species!\n"
+                    )
+                )
+                self.ws.scat_species = []
+            self.ws.scat_data_checked = 1
+            self.ws.Touch(self.ws.scat_data)
+            self.ws.pnd_fieldZero()
+
+        self.ws.atmfields_checkedCalc()
+        self.ws.atmgeom_checkedCalc()
+        self.ws.cloudbox_checkedCalc()
+
+        # Set specific heat capacity
+        self.ws.Tensor3SetConstant(
+            self.ws.specific_heat_capacity,
+            len(self.ws.p_grid.value),
+            1,
+            1,
+            self.Cp,
+        )
+
+        self.ws.StringCreate("Text")
+        self.ws.StringSet(self.ws.Text, "Start disort")
+        self.ws.Print(self.ws.Text, 0)
+
+        aux_var_allsky = []
+        if self.allsky:
+            # allsky flux
+            # ====================================================================================
+
+            self.ws.spectral_irradiance_fieldDisort(
+                nstreams=self.nstreams,
+                Npfct=-1,
+                emission=self.emission,
+            )
+
+            self.ws.StringSet(self.ws.Text, "disort finished")
+            self.ws.Print(self.ws.Text, 0)
+
+            # get auxilary varibles
+            if len(self.ws.disort_aux_vars.value):
+                for i in range(len(self.ws.disort_aux_vars.value)):
+                    aux_var_allsky.append(self.ws.disort_aux.value[i][:] * 1.0)
+
+            spec_flux = self.ws.spectral_irradiance_field.value[:, :, 0, 0, :] * 1.0
+
+            self.ws.RadiationFieldSpectralIntegrate(
+                self.ws.irradiance_field,
+                self.ws.f_grid,
+                self.ws.spectral_irradiance_field,
+                self.quadrature_weights,
+            )
+            flux = np.squeeze(self.ws.irradiance_field.value.value) * 1.0
+
+            self.ws.heating_ratesFromIrradiance()
+
+            heating_rate = np.squeeze(self.ws.heating_rates.value) * 86400  # K/d
+
+        # clearsky flux
+        # ====================================================================================
+
+        self.ws.pnd_fieldZero()
+        self.ws.spectral_irradiance_fieldDisort(
+            nstreams=self.nstreams,
+            Npfct=-1,
+            emission=self.emission,
+        )
+
+        # get auxilary varibles
+        aux_var_clearsky = []
+        if len(self.ws.disort_aux_vars.value):
+            for i in range(len(self.ws.disort_aux_vars.value)):
+                aux_var_clearsky.append(self.ws.disort_aux.value[i][:] * 1.0)
+
+        spec_flux_cs = self.ws.spectral_irradiance_field.value[:, :, 0, 0, :] * 1.0
+
+        self.ws.RadiationFieldSpectralIntegrate(
+            self.ws.irradiance_field,
+            self.ws.f_grid,
+            self.ws.spectral_irradiance_field,
+            self.quadrature_weights,
+        )
+        flux_cs = np.squeeze(self.ws.irradiance_field.value.value)
+
+        self.ws.heating_ratesFromIrradiance()
+        heating_rate_cs = np.squeeze(self.ws.heating_rates.value) * 86400  # K/d
+
+        # results
+        # ====================================================================================
+
+        results = {}
+
+        results["flux_clearsky_up"] = flux_cs[:, 1]
+        results["flux_clearsky_down"] = flux_cs[:, 0]
+        results["spectral_flux_clearsky_up"] = spec_flux_cs[:, :, 1]
+        results["spectral_flux_clearsky_down"] = spec_flux_cs[:, :, 0]
+        results["heating_rate_clearsky"] = heating_rate_cs
+        results["pressure"] = self.ws.p_grid.value[:]
+        results["altitude"] = self.ws.z_field.value[:, 0, 0]
+        results["f_grid"] = self.ws.f_grid.value[:]
+        results["aux_var_clearsky"] = aux_var_clearsky
+
+        if self.allsky:
+            results["flux_allsky_up"] = flux[:, 1]
+            results["flux_allsky_down"] = flux[:, 0]
+            results["spectral_flux_allsky_up"] = spec_flux[:, :, 1]
+            results["spectral_flux_allsky_down"] = spec_flux[:, :, 0]
+            results["heating_rate_allsky"] = heating_rate
+            results["aux_var_allsky"] = aux_var_allsky
+
+        return results
+
+    def flux_simulator_single_profile_NoLut(
+        self,
+        atm,
+        T_surface,
+        z_surface,
+        surface_reflectivity,
+        geographical_position=np.array([]),
+        cutoff=True,
+        lines_speedup_option="None",
+    ):
+        """
+        Perform a single atmospheric radiative flux calculation without using a Look-Up Table (NoLUT).
+        This method computes radiative fluxes and heating rates for a given atmospheric profile.
+        It can calculate both clearsky and all-sky (with clouds/particles) conditions depending on
+        the configuration of the FluxSimulator instance.
+        Parameters
+        ----------
+         atm : GriddedField4 
+            Atmospheric profile data in ARTS compact format.
+        T_surface : float
+            Surface temperature in Kelvin.
+        z_surface : float
+            Surface altitude in meters.
+        surface_reflectivity : float or array-like
+            Surface reflectivity value(s).
+        geographical_position : np.ndarray, optional
+            Array containing [latitude, longitude] in degrees.
+            Default is an empty array, which sets position to [0, 0].
+            Required if solar radiation (suns_do=1) is included.
+        cutoff : bool, optional
+            Whether to apply a frequency cutoff to the absorption lines.
+            Default is True.
+        lines_speedup_option : str, optional
+            Option for line-by-line calculation speedup.
+            Default is "None".
+        Returns
+        -------
+        dict
+            Dictionary containing:
+            - flux_clearsky_up : Upward clearsky integrated flux
+            - flux_clearsky_down : Downward clearsky integrated flux
+            - spectral_flux_clearsky_up : Spectral upward clearsky flux
+            - spectral_flux_clearsky_down : Spectral downward clearsky flux
+            - heating_rate_clearsky : Clearsky heating rate in K/day
+            - pressure : Pressure grid
+            - altitude : Altitude grid
+            - f_grid : Frequency grid
+            - aux_var_clearsky : Auxiliary variables for clearsky calculation
+            If all-sky calculations are enabled, also includes:
+            - flux_allsky_up : Upward all-sky integrated flux
+            - flux_allsky_down : Downward all-sky integrated flux
+            - spectral_flux_allsky_up : Spectral upward all-sky flux
+            - spectral_flux_allsky_down : Spectral downward all-sky flux
+            - heating_rate_allsky : All-sky heating rate in K/day
+            - aux_var_allsky : Auxiliary variables for all-sky calculation
+        Notes
+        -----
+        This method uses DISORT for the radiative transfer calculation and 
+        performs on-the-fly absorption calculations without relying on pre-computed
+        look-up tables.
+        """
+        
+
+        # define environment
+        # =============================================================================
+
+        # prepare atmosphere
+        self.ws.atm_fields_compact = atm
+        self.check_species()
+        self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
+
+        # set absorption
+        # =============================================================================
+
+        print("setting up absorption...\n")
+
+        # read spectroscopic data
+        print("...reading data\n")
+        self.ws.ReadXsecData(basename="xsec/")
+        self.ws.abs_lines_per_speciesReadSpeciesSplitCatalog(basename="lines/")
+
+        if cutoff == True:
+            self.ws.abs_lines_per_speciesCutoff(option="ByLine", value=750e9)
+
+        # Use on the fly absorption
+        self.ws.propmat_clearsky_agendaAuto(lines_speedup_option=lines_speedup_option)
+
+        if cutoff == True:
+            self.ws.lbl_checked = 1
+        else:
+            self.ws.lbl_checkedCalc()
 
         # setup
         # =============================================================================
@@ -1438,7 +1876,6 @@ class FluxSimulator(FluxSimulationConfig):
 
         self.ws.propmat_clearsky_fieldCalc()
 
-
         abs_coeff=self.ws.propmat_clearsky_field.value[:,:,0,0,:,0,0]
 
         # Calculate optical thickness
@@ -1452,9 +1889,7 @@ class FluxSimulator(FluxSimulationConfig):
         # results
         # ====================================================================================
 
-
         return optical_thickness
- 
 
 
 # %% addional functions
