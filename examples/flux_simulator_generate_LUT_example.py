@@ -10,6 +10,7 @@ Example script to demonstrate the usage of the flux_simulator_module for generat
 """
 
 import numpy as np
+from copy import deepcopy
 import matplotlib.pyplot as plt
 import FluxSimulator as fsm
 from pyarts.plots import arts_lookup
@@ -85,14 +86,14 @@ flux_simulator_LUT.set_species(
 )
 
 # Standard LUT
-flux_simulator_LUT.get_lookuptable(
+flux_simulator_LUT.get_lookuptable_profile(
     pressure_profile, temperature_profile, vmr, recalc=True
 )
-LUT = flux_simulator_LUT.ws.abs_lookup.value
+LUT = deepcopy(flux_simulator_LUT.ws.abs_lookup.value)
 
 # Wide LUT
 flux_simulator_LUT.get_lookuptableWide(recalc=True)
-LUT_wide = flux_simulator_LUT.ws.abs_lookup.value
+LUT_wide = deepcopy(flux_simulator_LUT.ws.abs_lookup.value)
 
 
 # plot

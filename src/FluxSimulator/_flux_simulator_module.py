@@ -819,6 +819,7 @@ class FluxSimulator(FluxSimulationConfig):
                 self.ws.ReadXML(self.ws.predefined_model_data,'model/mt_ckd_4.0/H2O.xml')
 
             self.ws.atm_fields_compact = atm
+            self.check_species()
             self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
 
             # setup LUT

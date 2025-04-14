@@ -117,7 +117,7 @@ results_lw = LW_flux_simulator.flux_simulator_single_profile(
     atm,
     surface_temperature,
     surface_altitude,
-    surface_reflectivity_sw,
+    surface_reflectivity_lw,
     geographical_position=[lat, lon],
 )
 
