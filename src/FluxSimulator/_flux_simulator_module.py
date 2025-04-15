@@ -97,7 +97,8 @@ class FluxSimulationConfig:
         self.gas_scattering = False
 
         # set default LUT path
-        self.lut_path = os.path.join(os.getcwd(), "cache", setup_name)
+        self.lut_path = os.path.join("/u/scratch/f/fspauldi/arts","cache",setup_name)
+        #self.lut_path = os.path.join(os.getcwd(), "cache", setup_name)
         self.lutname_fullpath = os.path.join(self.lut_path, "LUT.xml")
 
         cat.download.retrieve(version=self.catalog_version, verbose=False)
