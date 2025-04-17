@@ -1806,6 +1806,175 @@ class FluxSimulator(FluxSimulationConfig):
         print("...clearsky done")
 
         return results
+    
+    def radiance_simulator_single_profile(
+        self,
+        atm,
+        T_surface,
+        z_surface,
+        surface_reflectivity,
+        geographical_position=np.array([]),
+        **kwargs,
+    ):
+        
+
+        # define environment
+        # =============================================================================
+
+        # prepare atmosphere
+        self.ws.atm_fields_compact = atm
+        self.check_species()
+        self.ws.AtmFieldsAndParticleBulkPropFieldFromCompact()
+
+        # set absorption
+        # =============================================================================
+
+        print("setting up absorption...\n")
+
+        # Calculate or load LUT
+        self.get_lookuptableWide(**kwargs)
+
+        # Use LUT for absorption
+        self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
+
+        # setup
+        # =============================================================================
+
+        # surface altitudes
+        self.ws.z_surface = [[z_surface]]
+
+        # surface temperatures
+        self.ws.surface_skin_t = T_surface
+
+        # set geographical position
+        if len(geographical_position) == 0:
+            self.ws.lat_true = [0]
+            self.ws.lon_true = [0]
+
+            if self.ws.suns_do == 1:
+                raise ValueError(
+                    "You have defined a sun source but no geographical position!\n"
+                    + "Please define a geographical position!"
+                    + "The position is needed to calculate the solar zenith angle."
+                    + "Thanks!"
+                )
+
+        else:
+            self.ws.lat_true = [geographical_position[0]]
+            self.ws.lon_true = [geographical_position[1]]
+
+        # surface reflectivities
+        try:            
+            self.ws.surface_scalar_reflectivity = surface_reflectivity
+        except:            
+            self.ws.surface_scalar_reflectivity = [surface_reflectivity]   
+
+        print("starting calculation...\n")
+
+        # no sensor
+        self.ws.sensorOff()
+
+        # set cloudbox to full atmosphere
+        self.ws.cloudboxSetFullAtm()
+
+        # set gas scattering on or off
+        if self.gas_scattering == False:
+            self.ws.gas_scatteringOff()
+        else:
+            self.ws.gas_scattering_do = 1
+
+        if self.allsky:
+            self.ws.scat_dataCalc(interp_order=1)
+            self.ws.Delete(self.ws.scat_data_raw)
+            self.ws.scat_dataCheck(check_type="all")
+
+            self.ws.pnd_fieldCalcFromParticleBulkProps()
+            self.ws.scat_data_checkedCalc()
+        else:
+
+            if len(self.ws.scat_species.value) > 0:
+                print(
+                    ("You have define scattering species for a clearsky simulation.\n")
+                    + (
+                        "Since they are not used we have to erase the scattering species!\n"
+                    )
+                )
+                self.ws.scat_species = []
+            self.ws.scat_data_checked = 1
+            self.ws.Touch(self.ws.scat_data)
+            self.ws.pnd_fieldZero()
+
+        self.ws.atmfields_checkedCalc()
+        self.ws.atmgeom_checkedCalc()
+        self.ws.cloudbox_checkedCalc()
+
+        # Set specific heat capacity
+        self.ws.Tensor3SetConstant(
+            self.ws.specific_heat_capacity,
+            len(self.ws.p_grid.value),
+            1,
+            1,
+            self.Cp,
+        )
+
+        self.ws.StringCreate("Text")
+        self.ws.StringSet(self.ws.Text, "Start disort")
+        self.ws.Print(self.ws.Text, 0)
+
+        aux_var_allsky = []
+        if self.allsky:
+            # allsky flux
+            # ====================================================================================
+
+            self.ws.cloudbox_fieldDisort(
+                nstreams=self.nstreams,
+                Npfct=-1,
+                emission=self.emission,
+            )
+
+            self.ws.StringSet(self.ws.Text, "disort finished")
+            self.ws.Print(self.ws.Text, 0)
+
+            # get auxilary varibles
+            if len(self.ws.disort_aux_vars.value):
+                for i in range(len(self.ws.disort_aux_vars.value)):
+                    aux_var_allsky.append(self.ws.disort_aux.value[i][:] * 1.0)
+
+            spec_radiance_as = self.ws.cloudbox_field.value[:, :, 0, 0, :,:,0] * 1.0
+
+        # clearsky flux
+        # ====================================================================================
+
+        self.ws.pnd_fieldZero()
+        self.ws.cloudbox_fieldDisort(
+            nstreams=self.nstreams,
+            Npfct=-1,
+            emission=self.emission,
+        )
+
+        # get auxilary varibles
+        aux_var_clearsky = []
+        if len(self.ws.disort_aux_vars.value):
+            for i in range(len(self.ws.disort_aux_vars.value)):
+                aux_var_clearsky.append(self.ws.disort_aux.value[i][:] * 1.0)
+
+        spec_radiance_cs = self.ws.cloudbox_field.value[:, :, 0, 0, :,:,0] * 1.0
+
+        # results
+        # ====================================================================================
+
+        results = {}
+        results["spectral_radiance_clearsky"] = spec_radiance_cs
+        results["pressure"] = self.ws.p_grid.value[:]
+        results["altitude"] = self.ws.z_field.value[:, 0, 0]
+        results["f_grid"] = self.ws.f_grid.value[:]
+        results["aux_var_clearsky"] = aux_var_clearsky
+
+        if self.allsky:
+            results["spectral_radiance_allsky"] = spec_radiance_as            
+            results["aux_var_allsky"] = aux_var_allsky
+
+        return results
 
     def calc_optical_thickness(
         self,
