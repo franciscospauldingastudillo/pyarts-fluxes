@@ -72,7 +72,7 @@ class FluxSimulationConfig:
         self.well_mixed_species_defaults["O2"] = 0.21
         self.well_mixed_species_defaults["N2"] = 0.78
         
-        self.LUT_wide_h2o_vmr_default_parameters=[2,-12,-9]
+        self.LUT_wide_h2o_vmr_default_parameters=[2,-12,1e2,1e-9]
 
         # set default paths
         self.catalog_version = catalog_version
@@ -659,7 +659,6 @@ class FluxSimulator(FluxSimulationConfig):
         - The generated LUT is stored in the location specified by lutname_fullpath.
         """
 
-
         # use saved LUT. recalc only when necessary
         if recalc == False:
             try:
@@ -709,9 +708,8 @@ class FluxSimulator(FluxSimulationConfig):
                 ) * 10 ** (self.LUT_wide_h2o_vmr_default_parameters[1])
 
                 vmr_h20_default_profile[
-                    vmr_h20_default_profile
-                    < self.LUT_wide_h2o_vmr_default_parameters[2]
-                ] = 2
+                    self.ws.abs_p.value[:] < self.LUT_wide_h2o_vmr_default_parameters[2]
+                ] = self.LUT_wide_h2o_vmr_default_parameters[3]
 
                 for i, logic in enumerate(H2O_exist):
                     if logic:
@@ -1406,7 +1404,6 @@ class FluxSimulator(FluxSimulationConfig):
         performs on-the-fly absorption calculations without relying on pre-computed
         look-up tables.
         """
-        
 
         # define environment
         # =============================================================================
