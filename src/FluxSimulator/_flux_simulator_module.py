@@ -72,7 +72,7 @@ class FluxSimulationConfig:
         self.well_mixed_species_defaults["O2"] = 0.21
         self.well_mixed_species_defaults["N2"] = 0.78
         
-        self.LUT_wide_h2o_vmr_default_parameters=[2,-12,1e2,1e-9]
+        self.LUT_wide_h2o_vmr_default_parameters=[1e3,1e-8,1e5,1e-2]
 
         # set default paths
         self.catalog_version = catalog_version
@@ -703,14 +703,17 @@ class FluxSimulator(FluxSimulationConfig):
 
             if np.sum(H2O_exist):
 
-                vmr_h20_default_profile = self.ws.abs_p.value[:] ** (
-                    self.LUT_wide_h2o_vmr_default_parameters[0]
-                ) * 10 ** (self.LUT_wide_h2o_vmr_default_parameters[1])
 
+                log_paras=np.log10(self.LUT_wide_h2o_vmr_default_parameters)               
+                b=(log_paras[3]-log_paras[1])/(log_paras[2]-log_paras[0])
+                a=log_paras[1]-b*log_paras[0]
+
+                vmr_h20_default_profile = 10**a*(self.ws.abs_p.value[:])**b
+                
                 vmr_h20_default_profile[
-                    self.ws.abs_p.value[:] < self.LUT_wide_h2o_vmr_default_parameters[2]
-                ] = self.LUT_wide_h2o_vmr_default_parameters[3]
-
+                    self.ws.abs_p.value[:] < self.LUT_wide_h2o_vmr_default_parameters[0]
+                ] = self.LUT_wide_h2o_vmr_default_parameters[1]
+                
                 for i, logic in enumerate(H2O_exist):
                     if logic:
                         abs_vmrs[i, :] = vmr_h20_default_profile
