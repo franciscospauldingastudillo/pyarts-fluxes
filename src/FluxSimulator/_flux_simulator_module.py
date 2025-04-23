@@ -71,8 +71,8 @@ class FluxSimulationConfig:
         self.well_mixed_species_defaults["CH4"] = 1.8e-6
         self.well_mixed_species_defaults["O2"] = 0.21
         self.well_mixed_species_defaults["N2"] = 0.78
-        
-        self.LUT_wide_h2o_vmr_default_parameters=[1e3,1e-8,1e5,1e-2]
+
+        self.LUT_wide_h2o_vmr_default_parameters = [1e3, 1e-8, 1e5, 1e-2]
 
         # set default paths
         self.catalog_version = catalog_version
@@ -598,7 +598,7 @@ class FluxSimulator(FluxSimulationConfig):
         self.ws.abs_lookupAdapt()
         self.ws.lbl_checked = 1
 
-    def get_lookuptableWide(        
+    def get_lookuptableWide(
         self,
         t_min=150.0,
         t_max=350.0,
@@ -616,7 +616,7 @@ class FluxSimulator(FluxSimulationConfig):
     ):
         """
         Generates or retrieves a lookup table based on abs_lookupSetupWide for absorption calculations.
-        This method either loads a pre-existing lookup table (LUT) from storage or 
+        This method either loads a pre-existing lookup table (LUT) from storage or
         calculates a new one if the requested one doesn't exist or needs to be recalculated.
         Parameters
         ----------
@@ -686,12 +686,27 @@ class FluxSimulator(FluxSimulationConfig):
             if cutoff == True:
                 self.ws.abs_lines_per_speciesCutoff(option="ByLine", value=750e9)
 
-            if len([ str(tag) for tag in self.get_species().value if "ContCKDMT400" in str(tag)]):
-                self.ws.ReadXML(self.ws.predefined_model_data,'model/mt_ckd_4.0/H2O.xml')
+            if len(
+                [
+                    str(tag)
+                    for tag in self.get_species().value
+                    if "ContCKDMT400" in str(tag)
+                ]
+            ):
+                self.ws.ReadXML(
+                    self.ws.predefined_model_data, "model/mt_ckd_4.0/H2O.xml"
+                )
 
             # setup LUT
             print("...setting up lut\n")
-            self.ws.abs_lookupSetupWide(t_min=t_min, t_max=t_max, p_step=p_step, p_min=p_min, p_max=p_max, **kwargs)
+            self.ws.abs_lookupSetupWide(
+                t_min=t_min,
+                t_max=t_max,
+                p_step=p_step,
+                p_min=p_min,
+                p_max=p_max,
+                **kwargs,
+            )
 
             # SET abs_vwmrs by hand
             abs_vmrs = self.ws.abs_vmrs.value
@@ -703,17 +718,16 @@ class FluxSimulator(FluxSimulationConfig):
 
             if np.sum(H2O_exist):
 
+                log_paras = np.log10(self.LUT_wide_h2o_vmr_default_parameters)
+                b = (log_paras[3] - log_paras[1]) / (log_paras[2] - log_paras[0])
+                a = log_paras[1] - b * log_paras[0]
 
-                log_paras=np.log10(self.LUT_wide_h2o_vmr_default_parameters)               
-                b=(log_paras[3]-log_paras[1])/(log_paras[2]-log_paras[0])
-                a=log_paras[1]-b*log_paras[0]
+                vmr_h20_default_profile = 10**a * (self.ws.abs_p.value[:]) ** b
 
-                vmr_h20_default_profile = 10**a*(self.ws.abs_p.value[:])**b
-                
                 vmr_h20_default_profile[
                     self.ws.abs_p.value[:] < self.LUT_wide_h2o_vmr_default_parameters[0]
                 ] = self.LUT_wide_h2o_vmr_default_parameters[1]
-                
+
                 for i, logic in enumerate(H2O_exist):
                     if logic:
                         abs_vmrs[i, :] = vmr_h20_default_profile
@@ -816,8 +830,16 @@ class FluxSimulator(FluxSimulationConfig):
             if cutoff == True:
                 self.ws.abs_lines_per_speciesCutoff(option="ByLine", value=750e9)
 
-            if len([ str(tag) for tag in self.get_species().value if "ContCKDMT400" in str(tag)]):
-                self.ws.ReadXML(self.ws.predefined_model_data,'model/mt_ckd_4.0/H2O.xml')
+            if len(
+                [
+                    str(tag)
+                    for tag in self.get_species().value
+                    if "ContCKDMT400" in str(tag)
+                ]
+            ):
+                self.ws.ReadXML(
+                    self.ws.predefined_model_data, "model/mt_ckd_4.0/H2O.xml"
+                )
 
             self.ws.atm_fields_compact = atm
             self.check_species()
@@ -845,7 +867,7 @@ class FluxSimulator(FluxSimulationConfig):
             # save Lut
             self.ws.WriteXML("binary", self.ws.abs_lookup, self.lutname_fullpath)
 
-            print("LUT calculation finished!")        
+            print("LUT calculation finished!")
 
     def get_lookuptable_profile(
         self,
@@ -906,7 +928,7 @@ class FluxSimulator(FluxSimulationConfig):
         4. Sets up the ARTS workspace with the atmospheric data
         5. Calculates the absorption lookup table
         6. Saves the LUT to disk
-        """    
+        """
 
         # use saved LUT. recalc only when necessary
         if recalc == False:
@@ -1050,29 +1072,31 @@ class FluxSimulator(FluxSimulationConfig):
             self.ws.abs_lookupSetupBatch(p_step=p_step)
 
             # SET abs_vwmrs by hand
-            abs_vmrs=self.ws.abs_vmrs.value           
+            abs_vmrs = self.ws.abs_vmrs.value
 
             # check for water vapor
-            H2O_exist=[True  if "H2O" in str(x) else False for x in self.ws.abs_species.value]
+            H2O_exist = [
+                True if "H2O" in str(x) else False for x in self.ws.abs_species.value
+            ]
             # H2Osum=np.sum(H2O_exist)
 
             # Here we modify the vmr of H2O if there are more than one H2O species,
             # because in ARTS only the first one is set correctly (You can call this buggy behavior).
             # So, we set it to same value as the first H2O species.
 
-            if np.sum(H2O_exist):         
-                flag=False
+            if np.sum(H2O_exist):
+                flag = False
                 for i, logic in enumerate(H2O_exist):
 
                     if logic:
-                        if flag==False:
-                            vmrH2O_min=np.min(abs_vmrs[i,:])
-                            flag=True
+                        if flag == False:
+                            vmrH2O_min = np.min(abs_vmrs[i, :])
+                            flag = True
 
-                        logic2=abs_vmrs[i,:]==0
-                        abs_vmrs[i,logic2]=vmrH2O_min
+                        logic2 = abs_vmrs[i, :] == 0
+                        abs_vmrs[i, logic2] = vmrH2O_min
 
-                self.ws.abs_vmrs.value=abs_vmrs
+                self.ws.abs_vmrs.value = abs_vmrs
 
             # Setup propagation matrix agenda (absorption)
             self.ws.propmat_clearsky_agendaAuto(
@@ -1202,10 +1226,10 @@ class FluxSimulator(FluxSimulationConfig):
             self.ws.lon_true = [geographical_position[1]]
 
         # surface reflectivities
-        try:            
+        try:
             self.ws.surface_scalar_reflectivity = surface_reflectivity
-        except:            
-            self.ws.surface_scalar_reflectivity = [surface_reflectivity]   
+        except:
+            self.ws.surface_scalar_reflectivity = [surface_reflectivity]
 
         print("starting calculation...\n")
 
@@ -1363,7 +1387,7 @@ class FluxSimulator(FluxSimulationConfig):
         the configuration of the FluxSimulator instance.
         Parameters
         ----------
-         atm : GriddedField4 
+         atm : GriddedField4
             Atmospheric profile data in ARTS compact format.
         T_surface : float
             Surface temperature in Kelvin.
@@ -1403,7 +1427,7 @@ class FluxSimulator(FluxSimulationConfig):
             - aux_var_allsky : Auxiliary variables for all-sky calculation
         Notes
         -----
-        This method uses DISORT for the radiative transfer calculation and 
+        This method uses DISORT for the radiative transfer calculation and
         performs on-the-fly absorption calculations without relying on pre-computed
         look-up tables.
         """
@@ -1464,10 +1488,10 @@ class FluxSimulator(FluxSimulationConfig):
             self.ws.lon_true = [geographical_position[1]]
 
         # surface reflectivities
-        try:            
+        try:
             self.ws.surface_scalar_reflectivity = surface_reflectivity
-        except:            
-            self.ws.surface_scalar_reflectivity = [surface_reflectivity]   
+        except:
+            self.ws.surface_scalar_reflectivity = [surface_reflectivity]
 
         print("starting calculation...\n")
 
@@ -1806,7 +1830,7 @@ class FluxSimulator(FluxSimulationConfig):
         print("...clearsky done")
 
         return results
-    
+
     def radiance_simulator_single_profile(
         self,
         atm,
@@ -1870,7 +1894,6 @@ class FluxSimulator(FluxSimulationConfig):
         ValueError
             If a sun source is defined without geographical position.
         """
-        
 
         # define environment
         # =============================================================================
@@ -1918,10 +1941,10 @@ class FluxSimulator(FluxSimulationConfig):
             self.ws.lon_true = [geographical_position[1]]
 
         # surface reflectivities
-        try:            
+        try:
             self.ws.surface_scalar_reflectivity = surface_reflectivity
-        except:            
-            self.ws.surface_scalar_reflectivity = [surface_reflectivity]   
+        except:
+            self.ws.surface_scalar_reflectivity = [surface_reflectivity]
 
         print("starting calculation...\n")
 
@@ -1962,13 +1985,11 @@ class FluxSimulator(FluxSimulationConfig):
         self.ws.atmgeom_checkedCalc()
         self.ws.cloudbox_checkedCalc()
 
-
-
         self.ws.StringCreate("Text")
         self.ws.StringSet(self.ws.Text, "Start disort")
         self.ws.Print(self.ws.Text, 0)
 
-        self.ws.DOAngularGridsSet(N_za_grid = N_za, N_aa_grid = N_aa)
+        self.ws.DOAngularGridsSet(N_za_grid=N_za, N_aa_grid=N_aa)
 
         aux_var_allsky = []
         if self.allsky:
@@ -1976,7 +1997,7 @@ class FluxSimulator(FluxSimulationConfig):
             # ====================================================================================
 
             self.ws.cloudbox_fieldDisort(
-                nstreams=int(N_za//2)*2,
+                nstreams=int(N_za // 2) * 2,
                 Npfct=-1,
                 emission=self.emission,
             )
@@ -1989,7 +2010,7 @@ class FluxSimulator(FluxSimulationConfig):
                 for i in range(len(self.ws.disort_aux_vars.value)):
                     aux_var_allsky.append(self.ws.disort_aux.value[i][:] * 1.0)
 
-            spec_radiance_as = self.ws.cloudbox_field.value[:, :, 0, 0, :,:,0] * 1.0
+            spec_radiance_as = self.ws.cloudbox_field.value[:, :, 0, 0, :, :, 0] * 1.0
 
         # clearsky flux
         # ====================================================================================
@@ -2007,7 +2028,7 @@ class FluxSimulator(FluxSimulationConfig):
             for i in range(len(self.ws.disort_aux_vars.value)):
                 aux_var_clearsky.append(self.ws.disort_aux.value[i][:] * 1.0)
 
-        spec_radiance_cs = self.ws.cloudbox_field.value[:, :, 0, 0, :,:,0] * 1.0
+        spec_radiance_cs = self.ws.cloudbox_field.value[:, :, 0, 0, :, :, 0] * 1.0
 
         # results
         # ====================================================================================
@@ -2022,7 +2043,7 @@ class FluxSimulator(FluxSimulationConfig):
         results["azimuth_angle"] = self.ws.aa_grid.value[:]
 
         if self.allsky:
-            results["spectral_radiance_allsky"] = spec_radiance_as            
+            results["spectral_radiance_allsky"] = spec_radiance_as
             results["aux_var_allsky"] = aux_var_allsky
 
         return results
@@ -2083,10 +2104,10 @@ class FluxSimulator(FluxSimulationConfig):
             self.ws.lon_true = [geographical_position[1]]
 
         # surface reflectivities
-        try:            
+        try:
             self.ws.surface_scalar_reflectivity = surface_reflectivity
-        except:            
-            self.ws.surface_scalar_reflectivity = [surface_reflectivity]   
+        except:
+            self.ws.surface_scalar_reflectivity = [surface_reflectivity]
 
         print("starting calculation...\n")
 
@@ -2097,15 +2118,15 @@ class FluxSimulator(FluxSimulationConfig):
 
         self.ws.propmat_clearsky_fieldCalc()
 
-        abs_coeff=self.ws.propmat_clearsky_field.value[:,:,0,0,:,0,0]
+        abs_coeff = self.ws.propmat_clearsky_field.value[:, :, 0, 0, :, 0, 0]
 
         # Calculate optical thickness
         z_field = atm.data[1, :, 0, 0]
         dz = np.diff(z_field)
-        dz = np.append(np.array(dz[-1]),dz )
+        dz = np.append(np.array(dz[-1]), dz)
 
-        optical_thickness = np.cumsum(abs_coeff[:,:,::-1]*dz[::-1], axis=2)
-        optical_thickness = optical_thickness[:,:,::-1]
+        optical_thickness = np.cumsum(abs_coeff[:, :, ::-1] * dz[::-1], axis=2)
+        optical_thickness = optical_thickness[:, :, ::-1]
 
         # results
         # ====================================================================================
