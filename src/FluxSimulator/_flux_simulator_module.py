@@ -1814,8 +1814,62 @@ class FluxSimulator(FluxSimulationConfig):
         z_surface,
         surface_reflectivity,
         geographical_position=np.array([]),
+        N_za=36,
+        N_aa=1,
         **kwargs,
     ):
+        """
+        Simulates spectral radiance for a single atmospheric profile.
+        This method calculates either clearsky-only or both clearsky and allsky radiative transfer
+        using DISORT (DIScrete Ordinate Radiative Transfer) solver.
+        Parameters
+        ----------
+        atm : object
+            Atmospheric profile data in compact format.
+        T_surface : float
+            Surface skin temperature in Kelvin.
+        z_surface : float
+            Surface altitude in meters.
+        surface_reflectivity : float or list
+            Surface reflectivity value(s).
+        geographical_position : numpy.ndarray, optional
+            Geographic coordinates [latitude, longitude] in degrees.
+            Required if solar source is enabled.
+        N_za : int, optional
+            Number of zenith angles in the angular grid, default is 36.
+        N_aa : int, optional
+            Number of azimuth angles in the angular grid, default is 1.
+        **kwargs : dict
+            Additional arguments to pass to get_lookuptableWide method.
+        Returns
+        -------
+        dict
+            Dictionary containing:
+            - 'spectral_radiance_clearsky': Clear sky spectral radiance
+            - 'pressure': Pressure grid
+            - 'altitude': Altitude grid
+            - 'f_grid': Frequency grid
+            - 'aux_var_clearsky': Auxiliary variables for clear sky calculation
+            - 'zenith_angle': Zenith angle grid
+            - 'azimuth_angle': Azimuth angle grid
+            If allsky calculation is enabled:
+            - 'spectral_radiance_allsky': All sky spectral radiance
+            - 'aux_var_allsky': Auxiliary variables for all sky calculation
+        Notes
+        -----
+        The method performs the following steps:
+        1. Sets up the atmospheric fields
+        2. Configures absorption using look-up tables
+        3. Sets surface properties and geographical position
+        4. Configures gas scattering and cloudbox
+        5. Performs DISORT calculations for clearsky and optionally allsky conditions
+        6. Surface is assumed to be Lambertian
+        7. Returns the calculated radiances and auxiliary data
+        Raises
+        ------
+        ValueError
+            If a sun source is defined without geographical position.
+        """
         
 
         # define environment
@@ -1908,18 +1962,13 @@ class FluxSimulator(FluxSimulationConfig):
         self.ws.atmgeom_checkedCalc()
         self.ws.cloudbox_checkedCalc()
 
-        # Set specific heat capacity
-        self.ws.Tensor3SetConstant(
-            self.ws.specific_heat_capacity,
-            len(self.ws.p_grid.value),
-            1,
-            1,
-            self.Cp,
-        )
+
 
         self.ws.StringCreate("Text")
         self.ws.StringSet(self.ws.Text, "Start disort")
         self.ws.Print(self.ws.Text, 0)
+
+        self.ws.DOAngularGridsSet(N_za_grid = N_za, N_aa_grid = N_aa)
 
         aux_var_allsky = []
         if self.allsky:
@@ -1927,7 +1976,7 @@ class FluxSimulator(FluxSimulationConfig):
             # ====================================================================================
 
             self.ws.cloudbox_fieldDisort(
-                nstreams=self.nstreams,
+                nstreams=int(N_za//2)*2,
                 Npfct=-1,
                 emission=self.emission,
             )
@@ -1969,6 +2018,8 @@ class FluxSimulator(FluxSimulationConfig):
         results["altitude"] = self.ws.z_field.value[:, 0, 0]
         results["f_grid"] = self.ws.f_grid.value[:]
         results["aux_var_clearsky"] = aux_var_clearsky
+        results["zenith_angle"] = self.ws.za_grid.value[:]
+        results["azimuth_angle"] = self.ws.aa_grid.value[:]
 
         if self.allsky:
             results["spectral_radiance_allsky"] = spec_radiance_as            
