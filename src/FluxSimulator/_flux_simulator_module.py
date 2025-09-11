@@ -1067,6 +1067,17 @@ class FluxSimulator(FluxSimulationConfig):
             if cutoff == True:
                 self.ws.abs_lines_per_speciesCutoff(option="ByLine", value=750e9)
 
+            if len(
+                [
+                    str(tag)
+                    for tag in self.get_species().value
+                    if "ContCKDMT400" in str(tag)
+                ]
+            ):
+                self.ws.ReadXML(
+                    self.ws.predefined_model_data, "model/mt_ckd_4.0/H2O.xml"
+                )    
+
             # setup LUT
             print("...setting up lut\n")
             self.ws.abs_lookupSetupBatch(p_step=p_step)
@@ -1078,7 +1089,6 @@ class FluxSimulator(FluxSimulationConfig):
             H2O_exist = [
                 True if "H2O" in str(x) else False for x in self.ws.abs_species.value
             ]
-            # H2Osum=np.sum(H2O_exist)
 
             # Here we modify the vmr of H2O if there are more than one H2O species,
             # because in ARTS only the first one is set correctly (You can call this buggy behavior).
