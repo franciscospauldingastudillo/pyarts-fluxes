@@ -16,7 +16,7 @@ unit of frequency is Hz.
 import os
 import numpy as np
 from copy import deepcopy
-from pyarts import cat, xml, arts, version
+from pyarts import cat, arts, version
 from pyarts.workspace import Workspace
 from . import _flux_simulator_agendas as fsa
 
