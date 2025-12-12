@@ -11,7 +11,7 @@ Get ARTS (pyarts): https://radiativetransfer.org/getarts/
 
 pyarts-fluxes requires the following Python packages:
 
-- pyarts >=2.6.6
+- pyarts >=2.6.16
 
 ## Installation
 
