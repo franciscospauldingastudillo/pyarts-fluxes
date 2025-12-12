@@ -72,7 +72,7 @@ class FluxSimulationConfig:
         self.well_mixed_species_defaults["O2"] = 0.21
         self.well_mixed_species_defaults["N2"] = 0.78
 
-        self.LUT_wide_h2o_vmr_default_parameters = [1e3, 1e-8, 1e5, 1e-2]
+        self.LUT_wide_nls_pert_default = [0,1,10,25,50,100]
 
         # set default paths
         self.catalog_version = catalog_version
@@ -652,8 +652,6 @@ class FluxSimulator(FluxSimulationConfig):
             The lookup table is stored internally in the workspace
         Notes
         -----
-        - When water vapor is present in abs_species, a default profile is applied based on
-          the LUT_wide_h2o_vmr_default_parameters attribute of the class.
         - If recalc is False, the method attempts to read an existing LUT and only recalculates
           if it fails to find one or if it doesn't fit the requested parameters.
         - The generated LUT is stored in the location specified by lutname_fullpath.
@@ -706,37 +704,13 @@ class FluxSimulator(FluxSimulationConfig):
                 p_min=p_min,
                 p_max=p_max,
                 **kwargs,
-            )
-
-            # SET abs_vwmrs by hand
-            abs_vmrs = self.ws.abs_vmrs.value
-
-            # check for water vapor
-            H2O_exist = [
-                True if "H2O" in str(x) else False for x in self.ws.abs_species.value
-            ]
-
-            if np.sum(H2O_exist):
-
-                log_paras = np.log10(self.LUT_wide_h2o_vmr_default_parameters)
-                b = (log_paras[3] - log_paras[1]) / (log_paras[2] - log_paras[0])
-                a = log_paras[1] - b * log_paras[0]
-
-                vmr_h20_default_profile = 10**a * (self.ws.abs_p.value[:]) ** b
-
-                vmr_h20_default_profile[
-                    self.ws.abs_p.value[:] < self.LUT_wide_h2o_vmr_default_parameters[0]
-                ] = self.LUT_wide_h2o_vmr_default_parameters[1]
-
-                for i, logic in enumerate(H2O_exist):
-                    if logic:
-                        abs_vmrs[i, :] = vmr_h20_default_profile
-
-            self.ws.abs_vmrs.value = abs_vmrs
+            )            
 
             # add different nls_pert
             if len(nls_pert) > 0:
                 self.ws.abs_nls_pert = nls_pert
+            else:
+                self.ws.abs_nls_pert = self.LUT_wide_nls_pert_default
 
             # Setup propagation matrix agenda (absorption)
             self.ws.propmat_clearsky_agendaAuto(
@@ -1360,23 +1334,23 @@ class FluxSimulator(FluxSimulationConfig):
 
         results = {}
 
-        results["flux_clearsky_up"] = flux_cs[:, 1]
-        results["flux_clearsky_down"] = flux_cs[:, 0]
-        results["spectral_flux_clearsky_up"] = spec_flux_cs[:, :, 1]
-        results["spectral_flux_clearsky_down"] = spec_flux_cs[:, :, 0]
-        results["heating_rate_clearsky"] = heating_rate_cs
-        results["pressure"] = self.ws.p_grid.value[:]
-        results["altitude"] = self.ws.z_field.value[:, 0, 0]
-        results["f_grid"] = self.ws.f_grid.value[:]
-        results["aux_var_clearsky"] = aux_var_clearsky
+        results["flux_clearsky_up"] = deepcopy(flux_cs[:, 1])
+        results["flux_clearsky_down"] = deepcopy(flux_cs[:, 0])
+        results["spectral_flux_clearsky_up"] = deepcopy(spec_flux_cs[:, :, 1])
+        results["spectral_flux_clearsky_down"] = deepcopy(spec_flux_cs[:, :, 0])
+        results["heating_rate_clearsky"] = deepcopy(heating_rate_cs)
+        results["pressure"] = deepcopy(self.ws.p_grid.value[:])
+        results["altitude"] = deepcopy(self.ws.z_field.value[:, 0, 0])
+        results["f_grid"] = deepcopy(self.ws.f_grid.value[:])
+        results["aux_var_clearsky"] = deepcopy(aux_var_clearsky)
 
         if self.allsky:
-            results["flux_allsky_up"] = flux[:, 1]
-            results["flux_allsky_down"] = flux[:, 0]
-            results["spectral_flux_allsky_up"] = spec_flux[:, :, 1]
-            results["spectral_flux_allsky_down"] = spec_flux[:, :, 0]
-            results["heating_rate_allsky"] = heating_rate
-            results["aux_var_allsky"] = aux_var_allsky
+            results["flux_allsky_up"] = deepcopy(flux[:, 1])
+            results["flux_allsky_down"] = deepcopy(flux[:, 0])
+            results["spectral_flux_allsky_up"] = deepcopy(spec_flux[:, :, 1])
+            results["spectral_flux_allsky_down"] = deepcopy(spec_flux[:, :, 0])
+            results["heating_rate_allsky"] = deepcopy(heating_rate)
+            results["aux_var_allsky"] = deepcopy(aux_var_allsky)
 
         return results
 
@@ -1623,23 +1597,22 @@ class FluxSimulator(FluxSimulationConfig):
         results = {}
 
         results["flux_clearsky_up"] = flux_cs[:, 1]
-        results["flux_clearsky_down"] = flux_cs[:, 0]
-        results["spectral_flux_clearsky_up"] = spec_flux_cs[:, :, 1]
-        results["spectral_flux_clearsky_down"] = spec_flux_cs[:, :, 0]
-        results["heating_rate_clearsky"] = heating_rate_cs
-        results["pressure"] = self.ws.p_grid.value[:]
-        results["altitude"] = self.ws.z_field.value[:, 0, 0]
-        results["f_grid"] = self.ws.f_grid.value[:]
-        results["aux_var_clearsky"] = aux_var_clearsky
+        results["flux_clearsky_down"] = deepcopy(flux_cs[:, 0])
+        results["spectral_flux_clearsky_up"] = deepcopy(spec_flux_cs[:, :, 1])
+        results["spectral_flux_clearsky_down"] = deepcopy(spec_flux_cs[:, :, 0])
+        results["heating_rate_clearsky"] = deepcopy(heating_rate_cs)
+        results["pressure"] = deepcopy(self.ws.p_grid.value[:])
+        results["altitude"] = deepcopy(self.ws.z_field.value[:, 0, 0])
+        results["f_grid"] = deepcopy(self.ws.f_grid.value[:])
+        results["aux_var_clearsky"] = deepcopy(aux_var_clearsky)
 
         if self.allsky:
-            results["flux_allsky_up"] = flux[:, 1]
-            results["flux_allsky_down"] = flux[:, 0]
-            results["spectral_flux_allsky_up"] = spec_flux[:, :, 1]
-            results["spectral_flux_allsky_down"] = spec_flux[:, :, 0]
-            results["heating_rate_allsky"] = heating_rate
-            results["aux_var_allsky"] = aux_var_allsky
-
+            results["flux_allsky_up"] = deepcopy(flux[:, 1])
+            results["flux_allsky_down"] = deepcopy(flux[:, 0])
+            results["spectral_flux_allsky_up"] = deepcopy(spec_flux[:, :, 1])
+            results["spectral_flux_allsky_down"] = deepcopy(spec_flux[:, :, 0])
+            results["heating_rate_allsky"] = deepcopy(heating_rate)
+            results["aux_var_allsky"] = deepcopy(aux_var_allsky)
         return results
 
     def flux_simulator_batch(
@@ -1652,52 +1625,68 @@ class FluxSimulator(FluxSimulationConfig):
         sun_positions,
         start_index=0,
         end_index=-1,
+        **kwargs,
     ):
         """
-        This function calculates the fluxes for a batch of atmospheres.
-        The atmospheres are defined by an array of atmospheres.
-
+        Execute batch flux simulations for multiple atmospheric scenarios.
+        This method performs radiative transfer calculations for multiple atmospheric profiles,
+        computing upward and downward irradiance fields for both clearsky and (optionally) allsky
+        conditions.
         Parameters
         ----------
-        f_grid : 1Darray
-            Frequency grid.
-        atmospheres : ArrayOfGriddedField4
-            Batch of atmospheres.
-        surface_tempratures : 1Darray
-            Surface temperatures.
-        surface_altitudes : 1Darray
-            Surface altitudes.
-        surface_reflectivities : 1Darray
-            Surface reflectivities with each row either one element list of a list with the length of f_grid.
-        geographical_positions : 2Darray
-            Geographical positions with each row containing lat and lon.
-        sun_positions : 2Darray
-            Sun positions with each row conating distance sun earth, zenith latitude and zenith longitude.
-        start_index : int, default is 0
-            Start index of batch calculation.
-        end_index : int, default is -1
-            End index of batch calculation.
-
+        atmospheres : list
+            List of atmospheric profiles (batch_atm_fields_compact format) containing
+            temperature, pressure, altitude, and gas concentrations for each scenario.
+        surface_tempratures : array-like
+            Surface temperatures [K] for each atmospheric profile.
+        surface_altitudes : array-like
+            Surface altitudes [m] for each atmospheric profile.
+        surface_reflectivities : list of array-like
+            Surface scalar reflectivities for each atmospheric profile.
+        geographical_positions : list of tuple
+            List of (latitude, longitude) pairs [degrees] for each profile.
+        sun_positions : list of array-like
+            Solar position information for each profile. Empty array indicates no solar
+            contribution for that profile.
+        start_index : int, optional
+            Starting index in the batch for calculations. Default is 0.
+        end_index : int, optional
+            Ending index (exclusive) in the batch for calculations. Default is -1 (process all).
+        **kwargs : dict
+            Additional keyword arguments passed to get_lookuptableBatch for absorption
+            lookup table configuration.
         Returns
         -------
-        results : dict
-            Dictionary containing the results.
-            results["array_of_irradiance_field_clearsky"] : 3Darray
-                Clearsky irradiance field.
-            results["array_of_pressure"] : 2Darray
-                Pressure.
-            results["array_of_altitude"] : 2Darray
-                Altitude.
-            results["array_of_latitude"] : 1Darray
-                Latitude.
-            results["array_of_longitude"] : 1Darray
-                Longitude.
-            results["array_of_index"] : 1Darray
-                Index.
-            results["array_of_irradiance_field_allsky"] : 3Darray, optional
-                Allsky irradiance field.
-
-
+        dict
+            Dictionary containing the following keys:
+            - 'array_of_irradiance_field_clearsky' : list of ndarray
+                Clearsky irradiance fields [W/m²] for each profile. Shape varies with
+                atmospheric grid and number of streams.
+            - 'array_of_irradiance_field_allsky' : list of ndarray
+                Allsky irradiance fields [W/m²] for each profile (only if self.allsky=True).
+            - 'array_of_pressure' : list of ndarray
+                Pressure grids [Pa] for each profile.
+            - 'array_of_altitude' : list of ndarray
+                Altitude grids [m] for each profile.
+            - 'array_of_latitude' : list of float
+                Latitude [degrees] for each profile.
+            - 'array_of_longitude' : list of float
+                Longitude [degrees] for each profile.
+            - 'array_of_index' : list of int
+                Original batch indices for each result.
+        Notes
+        -----
+        - The method first sets up the radiative transfer environment including sun position,
+          surface properties, and atmospheric profiles.
+        - Absorption is handled via lookup tables (LUT) which are either calculated or loaded.
+        - If self.allsky is True, scattering calculations are performed using scat_data.
+        - Clearsky calculations are always performed.
+        - The method uses ARTS workspace (self.ws) for all radiative transfer computations.
+        - Progress is printed to stdout during execution.
+        See Also
+        --------
+        get_lookuptableBatch : Method to generate or load absorption lookup tables
+        set_sun : Method to configure solar properties
         """
 
         # define environment
@@ -1753,7 +1742,7 @@ class FluxSimulator(FluxSimulationConfig):
         print("setting up absorption...\n")
 
         # Calculate or load LUT
-        self.get_lookuptableWide()
+        self.get_lookuptableBatch(atmospheres, **kwargs)
 
         # Use LUT for absorption
         self.ws.propmat_clearsky_agendaAuto(use_abs_lookup=1)
