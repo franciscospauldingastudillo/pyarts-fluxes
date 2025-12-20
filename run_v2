@@ -1,0 +1,51 @@
+#! /bin/bash
+# Runscript to Initialize QSUB session on the UCLA Hoffman2 Cluster
+# https://www.ccn.ucla.edu/wiki/index.php/Hoffman2:Submitting_Jobs#job.q
+
+#$ -l highp,h_rt=24:00:00,h_data=12G
+#$ -l arch=intel-E5*
+#$ -V
+#$ -cwd
+#$ -m abe
+# -o /dev/null
+#$ -o /u/scratch/f/fspauldi/joblog.$JOB_ID
+#$ -j y
+
+# Email address to notify if job ends/aborted
+#$ -M $fspauldinga@gmail.com
+
+# Optional: Job Name
+#$ -N pyarts
+
+# Specify the script name
+fname="run_arts.py"
+
+# Define the directory where you want the standard output (i.e., log) saved
+outfile="/u/scratch/f/fspauldi/log.txt"
+
+# Run the simulation
+echo "Running simulation: $fname..."
+
+# Load pyarts virtual environment
+module load miniforge
+conda activate pyarts2
+
+# Create a symlink to save downloaded ARTS content to scratch folder
+ARTS_SCRATCH="${SCRATCH}/arts_cache"
+if [ ! -L "$HOME/.cache/arts" ]; then
+    ln -s "$ARTS_SCRATCH" "$HOME/.cache/arts"
+fi
+
+# Verify that the symlink is working as intended
+ls -l "$HOME/.cache/arts"
+
+# Run the simulation
+if ! python3 /helpers/${fname} > "$outfile" 2>&1; then
+    echo "Error: Simulation failed. Check log: $outfile" >&2
+    exit 1
+fi
+
+echo "Simulation completed successfully."
+
+# To submit this job to Hoffman2, run the following from the command line:
+# qsub ./qsub-example 
