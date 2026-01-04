@@ -1,8 +1,9 @@
 [project]
 name = "FluxSimulator"
-version = "0.4"
+version = "0.5"
 dependencies = [
-  "numpy"  
+  "numpy",
+  "pyarts >=2.6.16"
 ]
 requires-python = ">= 3.9"
 authors = [
@@ -15,4 +16,4 @@ description = "Easy-to-use wrapper to calculate radiative fluxes with ARTS."
 readme = "readme.md"
 
 [project.urls]
-Homepage = "https://github.com/m-brath/FluxSimulator"
+Homepage = "https://github.com/atmtools/pyarts-fluxes"
