@@ -13,19 +13,50 @@ def main(mode):
     # Create a bespoke thermodynamic profile using parameters class and ssm1d
     # =============================================================================
     import parameters
-    import ssm1d
+    from ssm1d.atm import get_custom_atm
     # Step 0: Define the case and the resolution
     # specify what gases and CIA-pairs to include (see generate_case)
-    gases     = ['H2O']
+    #gases     = ['H2O','CO2']
+    gases = ['H2O']
     ciapairs  = []
+    
+    # Declare the absorbing species (in ARTS)
+    #lut_description = "DEFAULT"
+    lut_description = "H2O_CTM"
+    if lut_description == "H2O_CTM":
+        lwabs_species = ["H2O, H2O-SelfContCKDMT400, H2O-ForeignContCKDMT400"]
+        swabs_species = ["H2O, H2O-SelfContCKDMT400, H2O-ForeignContCKDMT400"]
+    elif lut_description == "DEFAULT":
+        lwabs_species = [
+                "H2O, H2O-SelfContCKDMT400, H2O-ForeignContCKDMT400",
+                "O2-*-1e12-1e99,O2-CIAfunCKDMT100",
+                "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
+                "CO2, CO2-CKDMT252",
+                "CH4",
+                "O3",
+                "O3-XFIT",
+                ]
+        swabs_species = [
+            "H2O, H2O-SelfContCKDMT400, H2O-ForeignContCKDMT400",
+            "O2-*-1e12-1e99,O2-CIAfunCKDMT100",
+            "N2, N2-CIAfunCKDMT252, N2-CIArotCKDMT252",
+            "CO2, CO2-CKDMT252",
+            "CH4",
+            "O3",
+            "O3-XFIT",
+        ]
+    else:
+        print("Please choose a valid lut_description")
+        sys.exit(1)
 
     # dynamically create an argument dictionary
     def generate_args(exp, gases, ciapairs, **thermo):
         return {'exp': exp, **{f'gas{i+1}': gas for i, gas in enumerate(gases)}, 'valid_ciapairs': ciapairs, **thermo}
-    args = generate_args('earth',gases,ciapairs,RHs=0.75,RHmid=0.54,RHtrp=0.75,uniform=1,Ts=298.4,Tmid=250,Ttrp=200)
-            
+    #args = generate_args('earth',gases,ciapairs,RHs=0.75,RHmid=0.54,RHtrp=0.75,uniform=1,Ts=298.4,Tmid=250,Ttrp=200) 
+    args = generate_args('earth',gases,ciapairs,RHs=0.75,RHmid=0.54,RHtrp=0.75,uniform=1,Ts=298.5,Tmid=250,Ttrp=200)
+        
     # create a class instance and generate an RFM case from argument dictionary (300K = 7.1 K/km; 315K = 5.0 K/km)
-    par = parameters.parameters(Gamma=6.5e-3,z=np.arange(0,3.0e4,1))
+    par = parameters.parameters(Gamma=6.5e-3,z=np.arange(0,2.0e4,1))
     par.generate_case(**args)
 
     # vertical resolution
@@ -36,7 +67,13 @@ def main(mode):
     dataset  = ({'RFM':{},'ARTS':{}}) 
 
     # Step 1: Generate custom atmospheric profiles (p,T,z,x) at RFM and RFMi resolution
-    dat1 = ssm1d.atm.get_custom_atm(par, RFM)
+    gca_gases = {
+    'H2O': Gas('H2O', M=par.MH2O, cpmol=par.cpmolH2O),  # special: computed from RH
+    'N2' : Gas('N2',  M=par.MN2,  cpmol=par.cpmolN2,  xdry=None, fill_remainder=True),
+    'O2' : Gas('O2',  M=par.MO2,  cpmol=par.cpmolO2,  xdry=par.xO2), 
+    'CO2' : Gas('CO2',  M=par.MCO2,  cpmol=par.cpmolCO2,  xdry=par.xCO2)
+    }
+    dat1 = get_custom_atm(par, RFM, gca_gases)
     keys = ['p', 'T', 'RH', 'rho', 'Gamma', 'cp', 'cpmol','z']
     for key in keys:
         dataset['RFM'][key] = dat1[key]
@@ -45,13 +82,14 @@ def main(mode):
     for gas in gases:
         xgas_key = f'x{gas}'  # e.g., xN2, xCH4, xH2
         dataset['RFM'][xgas_key] = dat1[xgas_key]
-        
+ 
     # =============================================================================
     # Save profiles as an atm_{}.xml file
     # =============================================================================
 
     setup_name = f"{par.case}"
-    data_path = f"../atmdata/{setup_name}/"
+    #data_path = f"../atmdata/{setup_name}/"
+    data_path = f"/u/home/f/fspauldi/pyarts-fluxes/atmdata/{setup_name}/"
 
     # generate the directory if it doesn't exist
     os.makedirs(data_path, exist_ok=True)
@@ -61,7 +99,7 @@ def main(mode):
     )
 
     atm_field.savexml(f'{data_path}/atm_{par.case}.xml','ascii',True)
-    shutil.copy(f"../atmdata/single_atmosphere/aux_earth.xml", f"{data_path}/aux_{par.case}.xml")
+    shutil.copy(f"/u/home/f/fspauldi/pyarts-fluxes/atmdata/single_atmosphere/aux_earth.xml", f"{data_path}/aux_{par.case}.xml")
 
 
     # =============================================================================
@@ -87,6 +125,7 @@ def main(mode):
 
     min_wvn_sw = 2000.   # [cm^-1]
     max_wvn_sw = 3.3333E4  # [cm^-1]
+    #max_wvn_sw = 2010. # [cm^-1]
     n_freq_sw = int((max_wvn_sw-min_wvn_sw)) # using 1 cm-1 resolution in SW
     wvn_sw = np.linspace(min_wvn_sw, max_wvn_sw, n_freq_sw)
     f_grid_sw = convert.kaycm2freq(wvn_sw)
@@ -102,6 +141,7 @@ def main(mode):
     min_wvn = 10  # [cm^-1]
     #max_wvn = 3210  # [cm^-1]
     max_wvn = 1500  # [cm^-1]
+    #max_wvn = 15 # [cm^-1]
     #n_freq_lw = 200
     n_freq_lw = int((max_wvn-min_wvn)/par.dnu) # using 0.1 cm-1 resolution in LW
     wvn = np.linspace(min_wvn, max_wvn, n_freq_lw)
@@ -127,7 +167,8 @@ def main(mode):
 
     # surface temperature
     #surface_temperature = aux[0]  # [K]
-    surface_temperature = 301  # [K]
+    #surface_temperature = 301  # [K]
+    surface_temperature = par.Ts # [K]
 
     # surface reflectivity
     surface_reflectivity_sw = 0.3
@@ -138,6 +179,13 @@ def main(mode):
     # at which the sun is at zenith. If geographical position of observer is at the equator,
     # then a zenith angle of 30 degrees corresponds to a sun_pos latitude of 30 degrees.  
     sun_pos = [1.495978707e11, 71.0, 0.0]  # [m], [lat; deg], [lon; deg]
+
+    lw_lut_path = f"/u/scratch/f/fspauldi/lut_cache/{lut_description}/LW"
+    sw_lut_path = f"/u/scratch/f/fspauldi/lut_cache/{lut_description}/SW"
+    if not os.path.exists(lw_lut_path):
+        os.makedirs(lw_lut_path, exist_ok=True)
+    if not os.path.exists(sw_lut_path):
+        os.makedirs(sw_lut_path, exist_ok=True)
 
     #if not os.path.exists(os.path.join(os.getcwd(), f"datasets/dataset-{par.case}.pkl")):
     #lwcache = os.path.join(os.getcwd(), f"cache/{par.case}_LW")
@@ -153,8 +201,11 @@ def main(mode):
             LW_flux_simulator.ws.f_grid = f_grid_lw
 
             # set an optional alternative path to the LUT
-            lut_path = os.path.join(os.getcwd(), "cache", "earth-H2O-CTM_LW") 
-            LW_flux_simulator.set_paths(lut_path=lut_path)
+            #lut_path = os.path.join(os.getcwd(), "cache", "earth-H2O-CTM_LW") 
+            LW_flux_simulator.set_paths(lut_path=lw_lut_path)
+            
+            # set the absorbing species
+            LW_flux_simulator.set_species(lwabs_species)
 
             results_lw = LW_flux_simulator.flux_simulator_single_profile(
                 atm,
@@ -175,8 +226,11 @@ def main(mode):
             SW_flux_simulator.set_sun(sun_pos)
 
             # set an optional alternative path to the LUT
-            lut_path = os.path.join(os.getcwd(), "cache", "earth-H2O-CTM_SW") 
-            SW_flux_simulator.set_paths(lut_path=lut_path)
+            #lut_path = os.path.join(os.getcwd(), "cache", "earth-H2O-CTM_SW") 
+            SW_flux_simulator.set_paths(lut_path=sw_lut_path)
+            
+            # set the absorbing species
+            SW_flux_simulator.set_species(swabs_species)
 
             results_sw = SW_flux_simulator.flux_simulator_single_profile(
                 atm,
@@ -202,6 +256,15 @@ def main(mode):
         pfile = os.path.join(os.getcwd(), f"datasets/dataset-{par.case}.pkl")
         with open(pfile,'wb') as f:
             pickle.dump(dataset,f)
+
+        # Save to netcdf (safe)
+        ncfile = os.path.join(os.getcwd(), f"datasets/dataset-{par.case}.nc")    
+        from save import save_dataset_to_netcdf
+        save_dataset_to_netcdf(
+	    dataset,
+	    outfile=ncfile,
+            case=par.case,
+	)
 
     # =============================================================================
     # plot the result
